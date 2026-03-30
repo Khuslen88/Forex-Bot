@@ -52,6 +52,8 @@ def load_model(pair: str):
 
 def get_model_signal(model, df: pd.DataFrame) -> tuple:
     """Get the model's current action from the latest data."""
+    expected_dim = model.observation_space.shape[0]
+
     window = 20
     prices = df["Close"].values.astype(np.float64)
     idx = len(prices) - 1
@@ -79,13 +81,20 @@ def get_model_signal(model, df: pd.DataFrame) -> tuple:
         extra.append(float(df["yield_curve"].iloc[-1]))
         extra.append(float(df["rate_diff_ma"].iloc[-1]))
 
-    if "sentiment_score" in df.columns:
+    # Only include sentiment if the model was trained with it
+    if "sentiment_score" in df.columns and (22 + len(extra) + 3) <= expected_dim:
         extra.append(float(df["sentiment_score"].iloc[-1]))
         extra.append(float(df["sentiment_vol"].iloc[-1]))
         extra.append(float(df["news_volume"].iloc[-1]))
 
     extra = np.array(extra, dtype=np.float32)
     obs = np.concatenate([base_obs, extra])
+
+    # Pad or trim to match model's expected dimension
+    if len(obs) < expected_dim:
+        obs = np.concatenate([obs, np.zeros(expected_dim - len(obs), dtype=np.float32)])
+    elif len(obs) > expected_dim:
+        obs = obs[:expected_dim]
 
     action, _ = model.predict(obs, deterministic=True)
     return int(action), ACTION_NAMES[int(action)]

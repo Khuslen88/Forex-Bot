@@ -140,7 +140,10 @@ def get_model_action(model, df: pd.DataFrame) -> int:
     """
     Build the observation from the latest data and get the model's action.
     Uses the same logic as ForexFeatureEnv._get_obs().
+    Auto-detects the model's expected observation size and adjusts features.
     """
+    expected_dim = model.observation_space.shape[0]
+
     window = 20
     prices = df["Close"].values.astype(np.float64)
     idx = len(prices) - 1  # latest bar
@@ -171,14 +174,20 @@ def get_model_action(model, df: pd.DataFrame) -> int:
         extra.append(float(df["yield_curve"].iloc[-1]))
         extra.append(float(df["rate_diff_ma"].iloc[-1]))
 
-    # Append sentiment features if available
-    if "sentiment_score" in df.columns:
+    # Only include sentiment if the model was trained with it
+    if "sentiment_score" in df.columns and (22 + len(extra) + 3) <= expected_dim:
         extra.append(float(df["sentiment_score"].iloc[-1]))
         extra.append(float(df["sentiment_vol"].iloc[-1]))
         extra.append(float(df["news_volume"].iloc[-1]))
 
     extra = np.array(extra, dtype=np.float32)
     obs = np.concatenate([base_obs, extra])
+
+    # Pad or trim to match model's expected dimension
+    if len(obs) < expected_dim:
+        obs = np.concatenate([obs, np.zeros(expected_dim - len(obs), dtype=np.float32)])
+    elif len(obs) > expected_dim:
+        obs = obs[:expected_dim]
 
     action, _ = model.predict(obs, deterministic=True)
     return int(action)

@@ -177,7 +177,7 @@ def _train_multi_seed(train_df, val_df, pair, timesteps, save_path, n_seeds, age
 
 # ── Run all strategies on test data ───────────────────────────────────────────
 
-def run_all(model, test_df, env_class=ForexFeatureEnv, agent="dqn"):
+def run_all(model, test_df, env_class=ForexFeatureEnv, agent="dqn", pair="EURUSD"):
     agent_upper = agent.upper()
     _, run_fn, _ = _agent_funcs(agent)
 
@@ -193,12 +193,29 @@ def run_all(model, test_df, env_class=ForexFeatureEnv, agent="dqn"):
     print(f"      SMA Crossover final:        ${sma_equity[-1]:,.2f}")
     print(f"      Random Agent final:         ${rand_equity[-1]:,.2f}")
 
-    return {
+    results = {
         agent_upper:     (rl_equity,   rl_trades),
         "Buy & Hold":    (bah_equity,  bah_trades),
         "SMA Crossover": (sma_equity,  sma_trades),
         "Random Agent":  (rand_equity, rand_trades),
     }
+
+    # Also include the OTHER agent if its model exists
+    other_agent = "ppo" if agent == "dqn" else "dqn"
+    other_upper = other_agent.upper()
+    other_path = os.path.join(MODELS_PATH, f"{other_agent}_feature_{pair}.zip")
+    if os.path.exists(other_path):
+        print(f"      Also loading {other_upper} model for comparison ...")
+        _, other_run, other_load = _agent_funcs(other_agent)
+        try:
+            other_model = other_load(other_path, test_df, env_class=env_class)
+            other_equity, other_trades = other_run(other_model, test_df, env_class=env_class)
+            results[other_upper] = (other_equity, other_trades)
+            print(f"      {other_upper} final balance:          ${other_equity[-1]:,.2f}")
+        except Exception as e:
+            print(f"      Could not load {other_upper}: {e}")
+
+    return results
 
 
 # ── Metrics + chart ────────────────────────────────────────────────────────────
@@ -330,7 +347,7 @@ def main():
     df                = load_data(pair)
     train_df, test_df = split(df)
     model, env_class  = get_model(args, train_df, test_df, pair)
-    strategy_results  = run_all(model, test_df, env_class=env_class, agent=agent)
+    strategy_results  = run_all(model, test_df, env_class=env_class, agent=agent, pair=pair)
     evaluate_and_chart(strategy_results, test_df, pair, agent=agent)
 
     run_walk_forward(df, args, pair)

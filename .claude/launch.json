@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Streamlit Dashboard",
+      "runtimeExecutable": "streamlit",
+      "runtimeArgs": ["run", "dashboard.py"],
+      "port": 8501
+    },
+    {
+      "name": "JupyterLab",
+      "runtimeExecutable": "jupyter",
+      "runtimeArgs": ["lab", "--port=8888", "--no-browser"],
+      "port": 8888
+    },
+    {
+      "name": "Live Trader (Paper, All Pairs)",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["live_trader.py", "--pair", "all", "--broker", "paper", "--loop"],
+      "port": 8080
+    }
+  ]
+}
