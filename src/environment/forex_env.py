@@ -20,12 +20,22 @@ class ForexTradingEnv(gym.Env):
 
     Parameters
     ----------
-    df           : DataFrame with at least a 'Close' column, indexed by date.
-    window       : Number of past daily returns fed into the observation vector.
+    df              : DataFrame with at least a 'Close' column, indexed by date.
+                      For ATR-based SL/TP, must also contain 'ATR'.
+    window          : Number of past bar returns fed into the observation vector.
     initial_balance : Starting account balance in USD.
-    trading_cost : One-way cost per trade as a fraction of price (default 1 pip).
-    stop_loss    : Fraction of entry price for stop-loss trigger (default from settings).
-    take_profit  : Fraction of entry price for take-profit trigger (default from settings).
+    trading_cost    : Flat per-trade cost (legacy). Used only when spread_pips==0.
+    stop_loss       : Fixed-pct SL (legacy). Used only when atr_mult_sl==0.
+    take_profit     : Fixed-pct TP (legacy). Used only when atr_mult_tp==0.
+    min_hold_steps  : Block agent from changing position before holding this long.
+    atr_mult_sl     : v2 — if > 0, SL distance = atr_mult_sl * ATR_at_entry.
+                      Overrides stop_loss. Adapts to current volatility.
+    atr_mult_tp     : v2 — if > 0, TP distance = atr_mult_tp * ATR_at_entry.
+                      Overrides take_profit.
+    spread_pips     : v2 — if > 0, charge variable cost = (spread + slippage)
+                      pips per position change. Overrides trading_cost.
+    slippage_pips   : v2 — extra pips of slippage on top of spread.
+    pip_size        : v2 — pip unit in price (0.0001 for most, 0.01 for JPY).
     """
 
     metadata = {"render_modes": ["human"]}
@@ -39,6 +49,11 @@ class ForexTradingEnv(gym.Env):
         stop_loss: float = STOP_LOSS_PCT,
         take_profit: float = TAKE_PROFIT_PCT,
         min_hold_steps: int = 0,
+        atr_mult_sl: float = 0.0,
+        atr_mult_tp: float = 0.0,
+        spread_pips: float = 0.0,
+        slippage_pips: float = 0.0,
+        pip_size: float = 0.0001,
     ):
         super().__init__()
 
@@ -49,7 +64,26 @@ class ForexTradingEnv(gym.Env):
         self.stop_loss = stop_loss
         self.take_profit = take_profit
         self.min_hold_steps = min_hold_steps
+
+        # v2 dynamic SL/TP + realistic cost model
+        self.atr_mult_sl   = atr_mult_sl
+        self.atr_mult_tp   = atr_mult_tp
+        self.spread_pips   = spread_pips
+        self.slippage_pips = slippage_pips
+        self.pip_size      = pip_size
+
+        self.use_atr_sl_tp = (atr_mult_sl > 0 or atr_mult_tp > 0)
+        self.use_var_cost  = (spread_pips > 0)
+
+        if self.use_atr_sl_tp and "ATR" not in self.df.columns:
+            raise ValueError(
+                "ATR-based SL/TP requested but 'ATR' column missing from df. "
+                "Run add_indicators() first or use ForexFeatureEnv."
+            )
+
         self.prices = self.df["Close"].values.astype(np.float64)
+        self.atrs   = (self.df["ATR"].values.astype(np.float64)
+                       if "ATR" in self.df.columns else None)
 
         # ── Action space: Flat / Long / Short ─────────────────────────────
         self.action_space = spaces.Discrete(3)
@@ -71,6 +105,17 @@ class ForexTradingEnv(gym.Env):
         obs = np.append(returns, [rolling_vol, float(self.position)])
         return obs.astype(np.float32)
 
+    def _trade_cost_fraction(self, price: float) -> float:
+        """Per-position-change cost expressed as a fraction of price.
+
+        v2: variable spread + slippage in pips, scaled by pip_size / price.
+        v1 (legacy): flat self.trading_cost.
+        """
+        if self.use_var_cost:
+            total_pips = self.spread_pips + self.slippage_pips
+            return (total_pips * self.pip_size) / max(price, 1e-9)
+        return self.trading_cost
+
     # ── Core Gym interface ────────────────────────────────────────────────────
 
     def reset(self, seed=None, options=None):
@@ -85,12 +130,13 @@ class ForexTradingEnv(gym.Env):
         self.steps_in_position = 0
         self.position_entry_balance = self.initial_balance
         self.entry_price     = None                 # price when position was opened
+        self.entry_atr       = None                 # ATR at entry — locks in SL/TP distance
 
         return self._get_obs(), {}
 
     def step(self, action: int):
         """
-        Execute one trading day.
+        Execute one trading bar.
 
         action : int — 0 = Flat, 1 = Long, 2 = Short
         """
@@ -115,7 +161,8 @@ class ForexTradingEnv(gym.Env):
         position_changed = target_position != self.position
 
         # Apply trading cost only when the position actually changes
-        cost = self.trading_cost if position_changed else 0.0
+        cost = (self._trade_cost_fraction(self.prices[self.current_step])
+                if position_changed else 0.0)
 
         # Track trade completion for bonus/penalty
         trade_pnl = 0.0
@@ -129,16 +176,21 @@ class ForexTradingEnv(gym.Env):
         else:
             self.steps_in_position += 1
 
-        # Record entry price when opening a new position from flat
+        # Record entry price + ATR when opening a new position from flat
         prev_position = self.position
         self.position = target_position
 
         if position_changed and prev_position == 0 and self.position != 0:
             self.entry_price = self.prices[self.current_step]
+            if self.atrs is not None:
+                self.entry_atr = float(self.atrs[self.current_step])
+            else:
+                self.entry_atr = None
         elif position_changed and self.position == 0:
             self.entry_price = None
+            self.entry_atr = None
 
-        # Daily return: close[t+1] / close[t] - 1
+        # Bar return: close[t+1] / close[t] - 1
         daily_return = (
             self.prices[self.current_step + 1] - self.prices[self.current_step]
         ) / self.prices[self.current_step]
@@ -153,34 +205,36 @@ class ForexTradingEnv(gym.Env):
         current_price = self.prices[self.current_step + 1]
 
         if self.position != 0 and self.entry_price is not None:
+            # Compute SL/TP distances — ATR-scaled (v2) or fixed-pct (v1)
+            if self.use_atr_sl_tp and self.entry_atr is not None and self.entry_atr > 0:
+                sl_dist = self.atr_mult_sl * self.entry_atr if self.atr_mult_sl > 0 else \
+                          self.entry_price * self.stop_loss
+                tp_dist = self.atr_mult_tp * self.entry_atr if self.atr_mult_tp > 0 else \
+                          self.entry_price * self.take_profit
+            else:
+                sl_dist = self.entry_price * self.stop_loss
+                tp_dist = self.entry_price * self.take_profit
+
             if self.position == 1:  # LONG
-                if current_price <= self.entry_price * (1.0 - self.stop_loss):
+                if current_price <= self.entry_price - sl_dist:
                     sl_triggered = True
-                elif current_price >= self.entry_price * (1.0 + self.take_profit):
+                elif current_price >= self.entry_price + tp_dist:
                     tp_triggered = True
             elif self.position == -1:  # SHORT
-                if current_price >= self.entry_price * (1.0 + self.stop_loss):
+                if current_price >= self.entry_price + sl_dist:
                     sl_triggered = True
-                elif current_price <= self.entry_price * (1.0 - self.take_profit):
+                elif current_price <= self.entry_price - tp_dist:
                     tp_triggered = True
 
             if sl_triggered or tp_triggered:
                 self.position = 0
                 self.entry_price = None
+                self.entry_atr = None
 
         # Update peak for drawdown tracking
         self.peak_balance = max(self.peak_balance, self.balance)
 
         # ── Reward: risk-adjusted PnL ────────────────────────────────────
-        #
-        # Components:
-        #   1. Risk-adjusted PnL: divide by rolling volatility so the agent
-        #      learns to trade relative to current market conditions
-        #   2. Drawdown penalty: penalise being far from peak equity
-        #   3. Trade completion bonus: reward closing profitable trades
-        #   4. Mild flat penalty: discourage sitting out entirely
-        #   5. SL/TP reward shaping: bonus for TP, mild penalty for SL
-
         # 1. Risk-adjusted PnL (Sharpe-like per step)
         if len(self.returns_history) >= 5:
             recent_vol = float(np.std(self.returns_history[-20:]))

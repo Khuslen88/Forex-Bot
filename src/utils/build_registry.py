@@ -24,7 +24,8 @@ from src.environment.feature_env   import ForexFeatureEnv
 from src.agents.dqn_agent          import load_dqn, run_dqn
 from src.agents.ppo_agent          import load_ppo, run_ppo
 from src.backtesting.evaluate      import compute_metrics
-from config.settings               import TRAIN_TEST_SPLIT, TIMEFRAME_CONFIGS, MODELS_PATH
+from config.settings               import (TRAIN_TEST_SPLIT, TIMEFRAME_CONFIGS, MODELS_PATH,
+                                            ENV_V2_DEFAULTS, PIP_SIZES, SPREAD_PIPS)
 
 
 REGISTRY_PATH = os.path.join(MODELS_PATH, "registry.json")
@@ -33,11 +34,13 @@ ECON_PATH     = os.path.join(ROOT, "data", "economic", "fred_data.csv")
 
 
 def parse_model_filename(filename: str):
-    """Extract (agent, pair, timeframe) from a model filename.
+    """Extract (agent, pair, timeframe, version) from a model filename.
 
     Examples:
-        dqn_feature_EURUSD.zip      -> ("dqn", "EURUSD", "1d")
-        ppo_feature_USDCAD_1h.zip   -> ("ppo", "USDCAD", "1h")
+        dqn_feature_EURUSD.zip          -> ("dqn", "EURUSD", "1d", "v1")
+        ppo_feature_USDCAD_1h.zip       -> ("ppo", "USDCAD", "1h", "v1")
+        dqn_feature_EURUSD_v2.zip       -> ("dqn", "EURUSD", "1d", "v2")
+        ppo_feature_USDCAD_1h_v2.zip    -> ("ppo", "USDCAD", "1h", "v2")
     """
     name = os.path.basename(filename).replace(".zip", "")
     parts = name.split("_")
@@ -49,10 +52,15 @@ def parse_model_filename(filename: str):
     if parts[1] != "feature":
         return None
     pair = parts[2]
-    timeframe = parts[3] if len(parts) >= 4 else "1d"
-    if timeframe not in TIMEFRAME_CONFIGS:
-        return None
-    return agent, pair, timeframe
+
+    timeframe = "1d"
+    version   = "v1"
+    for tok in parts[3:]:
+        if tok in TIMEFRAME_CONFIGS:
+            timeframe = tok
+        elif tok in ("v1", "v2"):
+            version = tok
+    return agent, pair, timeframe, version
 
 
 def load_test_df(pair: str, timeframe: str) -> pd.DataFrame:
@@ -63,24 +71,32 @@ def load_test_df(pair: str, timeframe: str) -> pd.DataFrame:
     return df.iloc[split_idx:].copy().reset_index(drop=True)
 
 
-def make_env_factory(timeframe: str):
+def make_env_factory(timeframe: str, version: str = "v1", pair: str = "EURUSD"):
     cfg = TIMEFRAME_CONFIGS[timeframe]
-    return partial(
-        ForexFeatureEnv,
+    kwargs = dict(
         stop_loss=cfg["stop_loss_pct"],
         take_profit=cfg["take_profit_pct"],
         min_hold_steps=cfg["min_hold_steps"],
     )
+    if version == "v2":
+        kwargs.update(
+            atr_mult_sl=ENV_V2_DEFAULTS["atr_mult_sl"],
+            atr_mult_tp=ENV_V2_DEFAULTS["atr_mult_tp"],
+            spread_pips=SPREAD_PIPS.get(pair, 1.0),
+            slippage_pips=ENV_V2_DEFAULTS["slippage_pips"],
+            pip_size=PIP_SIZES.get(pair, 0.0001),
+        )
+    return partial(ForexFeatureEnv, **kwargs)
 
 
 def evaluate_model(model_path: str):
     parsed = parse_model_filename(model_path)
     if parsed is None:
         return None
-    agent, pair, timeframe = parsed
+    agent, pair, timeframe, version = parsed
 
     test_df = load_test_df(pair, timeframe)
-    env_factory = make_env_factory(timeframe)
+    env_factory = make_env_factory(timeframe, version=version, pair=pair)
 
     if agent == "dqn":
         model = load_dqn(model_path, test_df, env_class=env_factory)
@@ -93,6 +109,7 @@ def evaluate_model(model_path: str):
     metrics["agent"]        = agent.upper()
     metrics["pair"]         = pair
     metrics["timeframe"]    = timeframe
+    metrics["version"]      = version
     metrics["model_path"]   = os.path.relpath(model_path, ROOT)
     metrics["model_size_kb"] = round(os.path.getsize(model_path) / 1024, 1)
     metrics["computed_at"]  = datetime.now().isoformat(timespec="seconds")
@@ -124,10 +141,10 @@ def main():
         except Exception as e:
             print(f"FAILED: {e}")
 
-    # Index by best agent per pair (per timeframe), ranked by Sharpe
+    # Index by best agent per pair (per timeframe + version), ranked by Sharpe
     best_by_pair = {}
     for m in registry["models"]:
-        key = f"{m['pair']}_{m['timeframe']}"
+        key = f"{m['pair']}_{m['timeframe']}_{m.get('version', 'v1')}"
         if key not in best_by_pair or m["sharpe_ratio"] > best_by_pair[key]["sharpe_ratio"]:
             best_by_pair[key] = m
     registry["best_by_pair"] = best_by_pair

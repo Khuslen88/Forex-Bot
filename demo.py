@@ -34,22 +34,34 @@ from src.agents.dqn_agent          import train_dqn, run_dqn, load_dqn
 from src.agents.ppo_agent          import train_ppo, run_ppo, load_ppo
 from src.backtesting.evaluate      import compute_metrics, print_comparison, meets_targets, walk_forward_test
 from src.environment.feature_env   import ForexFeatureEnv
-from config.settings               import TRAIN_TEST_SPLIT, TOTAL_TIMESTEPS, MODELS_PATH, TIMEFRAME_CONFIGS
+from config.settings               import (TRAIN_TEST_SPLIT, TOTAL_TIMESTEPS, MODELS_PATH,
+                                            TIMEFRAME_CONFIGS, ENV_V2_DEFAULTS, PIP_SIZES,
+                                            SPREAD_PIPS)
 
 
-def _make_env_factory(timeframe: str):
-    """Build a callable env factory pre-bound with timeframe-specific SL/TP/min_hold.
+def _make_env_factory(timeframe: str, version: str = "v1", pair: str = "EURUSD"):
+    """Build a callable env factory for the given timeframe + env version.
+
+    v1 (legacy): fixed-pct SL/TP, flat trading cost.
+    v2:          ATR-scaled SL/TP, per-pair spread + slippage cost.
 
     Returned object behaves like a class: factory(df) → ForexFeatureEnv(df, ...).
-    Compatible with train_fn(env_class=...) which calls env_class(df).
     """
     cfg = TIMEFRAME_CONFIGS[timeframe]
-    return partial(
-        ForexFeatureEnv,
+    kwargs = dict(
         stop_loss=cfg["stop_loss_pct"],
         take_profit=cfg["take_profit_pct"],
         min_hold_steps=cfg["min_hold_steps"],
     )
+    if version == "v2":
+        kwargs.update(
+            atr_mult_sl=ENV_V2_DEFAULTS["atr_mult_sl"],
+            atr_mult_tp=ENV_V2_DEFAULTS["atr_mult_tp"],
+            spread_pips=SPREAD_PIPS.get(pair, 1.0),
+            slippage_pips=ENV_V2_DEFAULTS["slippage_pips"],
+            pip_size=PIP_SIZES.get(pair, 0.0001),
+        )
+    return partial(ForexFeatureEnv, **kwargs)
 
 
 # ── CLI arguments ──────────────────────────────────────────────────────────────
@@ -60,6 +72,9 @@ def parse_args():
     p.add_argument("--agent", default="dqn", choices=["dqn", "ppo"], help="RL agent: dqn or ppo (default: dqn)")
     p.add_argument("--timeframe", default="1d", choices=list(TIMEFRAME_CONFIGS.keys()),
                    help="Candle timeframe: 1d (daily) or 1h (hourly). Default: 1d")
+    p.add_argument("--version", default="v1", choices=["v1", "v2"],
+                   help="Env version: v1 (fixed SL/TP, flat cost) or v2 (ATR SL/TP, "
+                        "variable spread + slippage). Default: v1")
     p.add_argument("--quick", action="store_true", help="Train for only 20k steps (fast test)")
     p.add_argument("--load",  default=None,  help="Path to a pre-trained model .zip file")
     p.add_argument("--seeds", type=int, default=1, help="Train N models with different seeds, keep best (default: 1)")
@@ -118,8 +133,9 @@ def get_model(args, train_df, val_df, pair):
     agent = args.agent
     agent_upper = agent.upper()
     timeframe = args.timeframe
+    version = args.version
     train_fn, run_fn, load_fn = _agent_funcs(agent)
-    env_factory = _make_env_factory(timeframe)
+    env_factory = _make_env_factory(timeframe, version=version, pair=pair)
 
     if args.load:
         print(f"\n[3/5] Loading pre-trained model: {args.load}")
@@ -129,16 +145,23 @@ def get_model(args, train_df, val_df, pair):
 
     cfg = TIMEFRAME_CONFIGS[timeframe]
     timesteps = 20_000 if args.quick else cfg["total_timesteps"]
-    suffix = "" if timeframe == "1d" else f"_{timeframe}"
-    save_path = os.path.join(MODELS_PATH, f"{agent}_feature_{pair}{suffix}.zip")
+    tf_suffix = "" if timeframe == "1d" else f"_{timeframe}"
+    ver_suffix = "" if version == "v1" else f"_{version}"
+    save_path = os.path.join(MODELS_PATH, f"{agent}_feature_{pair}{tf_suffix}{ver_suffix}.zip")
     n_seeds = args.seeds
 
     if n_seeds > 1:
         return _train_multi_seed(train_df, val_df, pair, timesteps, save_path, n_seeds, agent, env_factory)
 
-    print(f"\n[3/5] Training {agent_upper} ({timeframe}) on {pair}  ({timesteps:,} timesteps)")
-    print(f"      SL: {cfg['stop_loss_pct']*100:.2f}%  TP: {cfg['take_profit_pct']*100:.2f}%  "
-          f"min_hold: {cfg['min_hold_steps']} bars")
+    print(f"\n[3/5] Training {agent_upper} ({timeframe} {version}) on {pair}  ({timesteps:,} timesteps)")
+    if version == "v2":
+        print(f"      ATR SL: {ENV_V2_DEFAULTS['atr_mult_sl']}x ATR  "
+              f"TP: {ENV_V2_DEFAULTS['atr_mult_tp']}x ATR  "
+              f"spread: {SPREAD_PIPS.get(pair, 1.0)}+{ENV_V2_DEFAULTS['slippage_pips']} pips  "
+              f"min_hold: {cfg['min_hold_steps']} bars")
+    else:
+        print(f"      SL: {cfg['stop_loss_pct']*100:.2f}%  TP: {cfg['take_profit_pct']*100:.2f}%  "
+              f"min_hold: {cfg['min_hold_steps']} bars")
     print(f"      Save path: {save_path}")
 
     model, _ = train_fn(
@@ -203,7 +226,8 @@ def _train_multi_seed(train_df, val_df, pair, timesteps, save_path, n_seeds, age
 
 # ── Run all strategies on test data ───────────────────────────────────────────
 
-def run_all(model, test_df, env_class=ForexFeatureEnv, agent="dqn", pair="EURUSD", timeframe="1d"):
+def run_all(model, test_df, env_class=ForexFeatureEnv, agent="dqn", pair="EURUSD",
+            timeframe="1d", version="v1"):
     agent_upper = agent.upper()
     _, run_fn, _ = _agent_funcs(agent)
 
@@ -226,11 +250,12 @@ def run_all(model, test_df, env_class=ForexFeatureEnv, agent="dqn", pair="EURUSD
         "Random Agent":  (rand_equity, rand_trades),
     }
 
-    # Also include the OTHER agent if its model exists
+    # Also include the OTHER agent if its model exists (same timeframe/version)
     other_agent = "ppo" if agent == "dqn" else "dqn"
     other_upper = other_agent.upper()
-    suffix = "" if timeframe == "1d" else f"_{timeframe}"
-    other_path = os.path.join(MODELS_PATH, f"{other_agent}_feature_{pair}{suffix}.zip")
+    tf_suffix  = "" if timeframe == "1d" else f"_{timeframe}"
+    ver_suffix = "" if version   == "v1" else f"_{version}"
+    other_path = os.path.join(MODELS_PATH, f"{other_agent}_feature_{pair}{tf_suffix}{ver_suffix}.zip")
     if os.path.exists(other_path):
         print(f"      Also loading {other_upper} model for comparison ...")
         _, other_run, other_load = _agent_funcs(other_agent)
@@ -247,7 +272,8 @@ def run_all(model, test_df, env_class=ForexFeatureEnv, agent="dqn", pair="EURUSD
 
 # ── Metrics + chart ────────────────────────────────────────────────────────────
 
-def evaluate_and_chart(strategy_results: dict, test_df: pd.DataFrame, pair: str, agent="dqn", timeframe="1d"):
+def evaluate_and_chart(strategy_results: dict, test_df: pd.DataFrame, pair: str,
+                        agent="dqn", timeframe="1d", version="v1"):
     agent_upper = agent.upper()
     print("\n[5/5] Computing metrics and generating chart ...")
 
@@ -329,8 +355,9 @@ def evaluate_and_chart(strategy_results: dict, test_df: pd.DataFrame, pair: str,
     fig.update_yaxes(title_text="Portfolio Value ($)", row=1, col=1)
     fig.update_yaxes(title_text="Price", row=2, col=1)
 
-    suffix = "" if timeframe == "1d" else f"_{timeframe}"
-    chart_path = os.path.join(os.path.dirname(__file__), f"results_{pair}{suffix}.html")
+    tf_suffix  = "" if timeframe == "1d" else f"_{timeframe}"
+    ver_suffix = "" if version   == "v1" else f"_{version}"
+    chart_path = os.path.join(os.path.dirname(__file__), f"results_{pair}{tf_suffix}{ver_suffix}.html")
     fig.write_html(chart_path)
     print(f"\nChart saved -> {chart_path}")
     print("Open in your browser to view the interactive equity curves.\n")
@@ -343,9 +370,10 @@ def evaluate_and_chart(strategy_results: dict, test_df: pd.DataFrame, pair: str,
 def run_walk_forward(df: pd.DataFrame, args, pair: str):
     """Run 5-fold walk-forward validation using the selected agent."""
     agent_upper = args.agent.upper()
-    print(f"\n[+] Walk-Forward Validation (5 folds, {agent_upper}, {args.timeframe}) ...")
+    print(f"\n[+] Walk-Forward Validation (5 folds, {agent_upper}, "
+          f"{args.timeframe} {args.version}) ...")
 
-    env_factory = _make_env_factory(args.timeframe)
+    env_factory = _make_env_factory(args.timeframe, version=args.version, pair=pair)
     train_fn, run_fn, _ = _agent_funcs(args.agent)
 
     def _train(train_df):
@@ -368,16 +396,20 @@ def main():
     pair      = args.pair.upper()
     agent     = args.agent
     timeframe = args.timeframe
+    version   = args.version
 
     print("=" * 60)
-    print(f"  Forex RL Bot — MVP Demo  |  Pair: {pair}  |  Agent: {agent.upper()}  |  TF: {timeframe}")
+    print(f"  Forex RL Bot — MVP Demo  |  Pair: {pair}  |  Agent: {agent.upper()}  "
+          f"|  TF: {timeframe}  |  Env: {version}")
     print("=" * 60)
 
     df                = load_data(pair, timeframe=timeframe)
     train_df, test_df = split(df)
     model, env_class  = get_model(args, train_df, test_df, pair)
-    strategy_results  = run_all(model, test_df, env_class=env_class, agent=agent, pair=pair, timeframe=timeframe)
-    evaluate_and_chart(strategy_results, test_df, pair, agent=agent, timeframe=timeframe)
+    strategy_results  = run_all(model, test_df, env_class=env_class, agent=agent,
+                                  pair=pair, timeframe=timeframe, version=version)
+    evaluate_and_chart(strategy_results, test_df, pair, agent=agent,
+                        timeframe=timeframe, version=version)
 
     run_walk_forward(df, args, pair)
 

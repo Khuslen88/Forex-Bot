@@ -4,19 +4,20 @@ A reinforcement learning-based forex trading bot that combines **technical analy
 
 ## Results
 
-Best agent per pair on the test period (20% holdout, ~2 years):
+Production set: best **daily v1** model per pair, evaluated on the test period (20% holdout, ~2 years). Computed by `src/utils/build_registry.py` and stored in `models/registry.json`.
 
-| Pair | Best Agent | Return | Sharpe Ratio | Win Rate | Max Drawdown | Profit Factor |
-|------|-----------|--------|-------------|----------|-------------|--------------|
-| USD/JPY | DQN | +28.17% | 1.398 | 55.2% | -7.3% | 1.623 |
-| USD/CAD | PPO | +16.59% | 1.574 | 68.3% | -5.1% | 1.829 |
-| GBP/USD | DQN | +14.31% | 1.077 | 58.2% | -5.5% | 1.748 |
-| AUD/USD | DQN | +8.53% | 0.523 | 54.8% | -9.7% | 1.160 |
-| EUR/USD | DQN | +5.05% | 0.417 | 54.4% | -10.7% | 1.097 |
+| Pair | Best Agent | Return | Sharpe | Win Rate | Max DD | Profit Factor |
+|------|-----------|--------|--------|----------|--------|---------------|
+| USD/CAD | PPO | +13.98% | **+1.344** | 67.9% | -5.1% | 1.70 |
+| USD/JPY | DQN | +23.18% | **+1.182** | 56.8% | -7.8% | 1.47 |
+| GBP/USD | DQN | +9.00% | +0.705 | 58.8% | -8.3% | 1.33 |
+| AUD/USD | PPO | -0.70% | -0.002 | 50.0% | -9.4% | 0.90 |
+| EUR/USD | DQN | -4.74% | -0.363 | 54.4% | -10.6% | 0.86 |
 
-- 3/5 pairs hit all 4 project targets (Sharpe > 1.0, DD < 20%, Win Rate > 45%, Profit Factor > 1.2)
-- All 5 pairs profitable using the best agent
-- All pairs beat Buy-and-Hold, SMA Crossover, and Random Agent baselines
+- **2/5 pairs hit Sharpe ≥ 1.0** (USD/CAD and USD/JPY) — institutional-grade risk-adjusted returns
+- **3/5 pairs profitable** with positive Sharpe
+- All pairs beat the Random Agent baseline; the strong pairs also beat Buy-and-Hold and SMA Crossover
+- Best ensemble result (daily + 1H confirmation): **USD/CAD ensemble Sharpe +1.65, win rate 75.8%** — see Experiments section
 
 ## Features
 
@@ -31,8 +32,9 @@ Best agent per pair on the test period (20% holdout, ~2 years):
 - Multi-seed training (best of 3) to reduce variance from random initialization
 
 ### Risk Management
-- **Stop Loss:** 2% automatic position close to limit downside
-- **Take Profit:** 3% automatic position close to lock in gains
+- **Stop Loss:** 2% automatic position close to limit downside (production v1)
+- **Take Profit:** 3% automatic position close to lock in gains (production v1)
+- **Optional v2 mode:** ATR-scaled SL/TP that adapts to current volatility (`--version v2`) — see Experiments
 - **Risk-adjusted reward function:** Sharpe-inspired with drawdown penalty
 
 ### Live Trading
@@ -102,17 +104,17 @@ python demo.py --pair EURUSD --load models/dqn_feature_EURUSD.zip
 
 ### Paper trading
 ```bash
-# See model signal without trading
-python live_trader.py --pair all --dry-run
+# See model signal without trading (uses best daily v1 model per pair)
+python live_trader.py --pair all --use-best --dry-run
 
 # Execute trades on paper account
-python live_trader.py --pair all
+python live_trader.py --pair all --use-best
 
 # Check account status
 python live_trader.py --status
 
-# Run daily in a loop
-python live_trader.py --pair all --loop
+# Run continuously every hour
+python live_trader.py --pair all --use-best --loop --interval 3600
 ```
 
 ### Dashboard
@@ -149,21 +151,52 @@ streamlit run dashboard.py
 - **Walk-forward validation:** 5-fold time-series cross-validation
 - **Baselines compared:** Buy-and-Hold, SMA Crossover (50/200), Random Agent
 
+## Experiments & Findings
+
+This project tested several ideas beyond the production daily v1 setup. Each is documented honestly below — the failed experiments are as valuable as the wins.
+
+### 1H Timeframe (Dukascopy data, 311k bars)
+- Downloaded 10 years of hourly OHLCV from Dukascopy (`src/data/fetch_dukascopy_1h.py`)
+- Trained 10 hourly models (5 pairs × DQN/PPO) with tighter SL/TP and `min_hold=4 bars`
+- **Result:** All hourly models scored Sharpe 0.0–0.2 — much worse than daily counterparts
+- **Why:** 1H bar movements are dominated by noise; the bot couldn't find a stable edge at this granularity within 1.5M timesteps
+- AUDUSD and EURUSD were the only pairs where 1H beat daily on raw return (but Sharpe was still lower)
+
+### v2 Environment (ATR-scaled SL/TP + variable transaction costs)
+- Replaced fixed % SL/TP with `1.5× ATR` / `2.5× ATR` so stops adapt to volatility
+- Replaced flat 1-pip cost with per-pair spread + 0.5-pip slippage from `SPREAD_PIPS` config
+- Trained all 10 models again under v2 env (`--version v2`)
+- **Result:** v2 underperformed v1 across the board. 1H v2 was a disaster — 2 models stopped trading entirely
+- **Why:** ATR-based stops at 1.5× on 1H = ~15-pip distance, but average 1H bar = ~8 pips → stops fire on noise. Combined with realistic costs, the model's effective edge went negative. On daily, the change was less catastrophic but still a small step backward
+- **Lesson:** Tune one thing at a time and validate. Stick with v1 for production
+
+### Ensemble (daily + 1H confirmation)
+- Strategy: only trade when daily AND hourly models agree on direction; else stay flat (`src/ensemble.py`)
+- **Result:** Mixed
+  - **USD/CAD ensemble: Sharpe +1.65 (vs +1.34 single)** — new project best
+  - **AUD/USD ensemble: Sharpe +0.56 (vs +0.21 1H)** — meaningful improvement
+  - GBP/USD: Sharpe dropped slightly but win rate jumped to 66.7%
+  - USD/JPY and EUR/USD: ensemble worse (1H models too weak to add signal)
+- **Lesson:** Ensemble works when both component models are decent. With weak 1H models on most pairs, it's only useful for USD/CAD and AUD/USD
+
 ## Limitations
 
-- **Daily timeframe only** — trained on daily candles; doesn't capture intraday moves
-- **Single pair at a time** — no portfolio-level correlation management
-- **Historical sentiment proxy** — live sentiment uses RSS feeds, but training uses price-based proxy since historical headlines aren't available
+- **Single pair at a time** — no portfolio-level correlation management; pairs are siloed
+- **Historical sentiment proxy** — live sentiment uses RSS + TextBlob, but training uses a price-momentum proxy since old headlines aren't available
 - **Market regime sensitivity** — performs better in trending markets (high ADX); struggles in choppy/sideways conditions
-- **No live money tested** — paper trading only; would need slippage modeling for real deployment
+- **Single seed in v2 trainings** — production v1 used best-of-3 seeds; v2 used 1 seed each. Some of the v2 underperformance is variance, not necessarily v2 being worse
+- **No live money tested** — paper trading only; would need realistic slippage modeling and live forward-testing before risking capital
 
 ## Next Steps
 
-- Intraday support (1H/4H candles) using MT5 historical data export
-- Ensemble voting across multiple models per pair
-- Portfolio-level risk management (pair correlation awareness)
-- Real-time sentiment from financial news APIs
-- Automated retraining pipeline (monthly refresh on new data)
+- **Hyperparameter sweep on weak pairs** (EUR/USD, AUD/USD) — try different LRs, gammas, network sizes to find what unlocks them
+- **Recurrent PPO (LSTM)** — current MLP can't model temporal sequences; LSTM may help
+- **v2 retuned** — try gentler ATR multipliers (1.0× SL, 1.5× TP) and lower spreads to test if v2 ever outperforms
+- **Multi-seed v2** — rerun v2 with 3 seeds to separate variance from real underperformance
+- **Portfolio-level risk** — manage pair correlation, position sizing as % of equity, max-daily-loss kill switch
+- **Real-time sentiment** — replace TextBlob proxy with a financial-news embedding model
+- **Automated retraining** — monthly refresh on new data with drift detection
+- **Production webapp** — `webapp/` (React + FastAPI) is scaffolded; wire it to the registry for a deployable dashboard
 
 ## Tech Stack
 

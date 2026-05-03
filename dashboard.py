@@ -91,9 +91,20 @@ def load_registry() -> dict:
         return json.load(f)
 
 
-def best_model_for_pair(pair: str, registry: dict):
-    """Return the highest-Sharpe model for the pair (across all timeframes)."""
+def best_model_for_pair(pair: str, registry: dict, prefer_daily_v1: bool = True):
+    """Return the highest-Sharpe model for the pair.
+
+    With prefer_daily_v1 (default), only consider 1d v1 models — these are
+    the production set (1H underperforms; v2 env experiments hurt results).
+    Set False to include v2 / 1H / ensemble in the search.
+    """
     candidates = [m for m in registry.get("models", []) if m["pair"] == pair]
+    if prefer_daily_v1:
+        prod = [m for m in candidates
+                if m.get("timeframe") == "1d"
+                and m.get("version", "v1") == "v1"]
+        if prod:
+            candidates = prod
     if not candidates:
         return None
     return max(candidates, key=lambda m: m["sharpe_ratio"])

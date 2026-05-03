@@ -139,19 +139,22 @@ def _load_registry():
 
 
 def _resolve_best_model_path(pair: str):
-    """Look up the highest-Sharpe model for `pair` in the registry.
+    """Look up the highest-Sharpe DAILY v1 model for `pair` in the registry.
 
+    Production set only — 1H and v2 env experiments underperformed daily v1.
     Returns (path, agent_upper) or (None, None) if no registry / no models.
     """
     reg = _load_registry()
     if reg is None:
         return None, None
-    candidates = [m for m in reg.get("models", []) if m["pair"] == pair]
+    candidates = [m for m in reg.get("models", [])
+                  if m["pair"] == pair
+                  and m.get("timeframe") == "1d"
+                  and m.get("version", "v1") == "v1"]
     if not candidates:
         return None, None
     best = max(candidates, key=lambda m: m["sharpe_ratio"])
-    suffix = "" if best["timeframe"] == "1d" else f"_{best['timeframe']}"
-    fname = f"{best['agent'].lower()}_feature_{pair}{suffix}.zip"
+    fname = f"{best['agent'].lower()}_feature_{pair}.zip"
     path = os.path.join(MODELS_PATH, fname)
     if not os.path.exists(path):
         return None, None

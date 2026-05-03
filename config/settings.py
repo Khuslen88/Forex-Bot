@@ -104,6 +104,28 @@ TIMEFRAME_CONFIGS = {
 }
 
 # =============================================================================
+# V2 ENVIRONMENT — ATR-based dynamic SL/TP + realistic transaction costs
+# =============================================================================
+# Used when --version v2 is passed to demo.py. Stops adapt to current
+# volatility (ATR), and per-pair spreads + slippage replace the flat trading
+# cost. Goal: better generalization (less overfitting to a single SL distance)
+# and more realistic backtest numbers.
+ENV_V2_DEFAULTS = {
+    'atr_mult_sl':   1.5,    # SL distance = 1.5 * ATR_at_entry
+    'atr_mult_tp':   2.5,    # TP distance = 2.5 * ATR_at_entry  (1.67 R:R)
+    'slippage_pips': 0.5,    # extra cost on top of per-pair spread
+}
+
+# JPY pairs use a different pip size (price is ~150 vs ~1.0)
+PIP_SIZES = {
+    'EURUSD': 0.0001,
+    'USDJPY': 0.01,
+    'GBPUSD': 0.0001,
+    'AUDUSD': 0.0001,
+    'USDCAD': 0.0001,
+}
+
+# =============================================================================
 # FEATURE SETTINGS
 # =============================================================================
 TECHNICAL_INDICATORS = [

@@ -1,0 +1,70 @@
+{
+  "results": [
+    {
+      "total_return": -0.07209224796464808,
+      "sharpe_ratio": -0.8908484778561293,
+      "max_drawdown": -0.09395363498144073,
+      "win_rate": 0.5166666666666667,
+      "profit_factor": 0.5448566861037092,
+      "pair": "EURUSD",
+      "version": "v1",
+      "daily_agent": "DQN",
+      "hourly_agent": "DQN",
+      "n_trades": 60,
+      "final_balance": 9279.07752035352
+    },
+    {
+      "total_return": 0.09930850720708428,
+      "sharpe_ratio": 0.6961873618498062,
+      "max_drawdown": -0.0490002047783853,
+      "win_rate": 0.6379310344827587,
+      "profit_factor": 1.6389095087836743,
+      "pair": "USDJPY",
+      "version": "v1",
+      "daily_agent": "DQN",
+      "hourly_agent": "DQN",
+      "n_trades": 58,
+      "final_balance": 10993.085072070842
+    },
+    {
+      "total_return": 0.04731093522210883,
+      "sharpe_ratio": 0.5623126700342195,
+      "max_drawdown": -0.05939727708186267,
+      "win_rate": 0.6666666666666666,
+      "profit_factor": 1.8763148400413123,
+      "pair": "GBPUSD",
+      "version": "v1",
+      "daily_agent": "DQN",
+      "hourly_agent": "DQN",
+      "n_trades": 39,
+      "final_balance": 10473.109352221089
+    },
+    {
+      "total_return": 0.06455605502669193,
+      "sharpe_ratio": 0.5601494634707334,
+      "max_drawdown": -0.05292321800537794,
+      "win_rate": 0.45098039215686275,
+      "profit_factor": 1.0276561241377304,
+      "pair": "AUDUSD",
+      "version": "v1",
+      "daily_agent": "PPO",
+      "hourly_agent": "DQN",
+      "n_trades": 51,
+      "final_balance": 10645.560550266919
+    },
+    {
+      "total_return": 0.10194739258865693,
+      "sharpe_ratio": 1.651166993096628,
+      "max_drawdown": -0.026195647573608382,
+      "win_rate": 0.7575757575757576,
+      "profit_factor": 2.9385007964597065,
+      "pair": "USDCAD",
+      "version": "v1",
+      "daily_agent": "PPO",
+      "hourly_agent": "DQN",
+      "n_trades": 33,
+      "final_balance": 11019.47392588657
+    }
+  ],
+  "version": "v1"
+}

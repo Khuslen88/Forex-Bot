@@ -60,12 +60,22 @@ class ForexFeatureEnv(ForexTradingEnv):
         stop_loss: float = STOP_LOSS_PCT,
         take_profit: float = TAKE_PROFIT_PCT,
         min_hold_steps: int = 0,
+        atr_mult_sl: float = 0.0,
+        atr_mult_tp: float = 0.0,
+        spread_pips: float = 0.0,
+        slippage_pips: float = 0.0,
+        pip_size: float = 0.0001,
     ):
         super().__init__(
             df, window, initial_balance, trading_cost,
             stop_loss=stop_loss,
             take_profit=take_profit,
             min_hold_steps=min_hold_steps,
+            atr_mult_sl=atr_mult_sl,
+            atr_mult_tp=atr_mult_tp,
+            spread_pips=spread_pips,
+            slippage_pips=slippage_pips,
+            pip_size=pip_size,
         )
 
         # Verify the required indicator columns exist
