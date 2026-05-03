@@ -81,6 +81,29 @@ TOTAL_TIMESTEPS = 500_000
 TRAIN_TEST_SPLIT = 0.8  # 80% train, 20% test
 
 # =============================================================================
+# 1H TIMEFRAME OVERRIDES
+# =============================================================================
+# 1H candles move ~5x less than daily candles, so SL/TP must be tighter and
+# minimum hold duration prevents the agent from churning the position every bar.
+# More candles also means more training timesteps to converge.
+TIMEFRAME_CONFIGS = {
+    '1d': {
+        'stop_loss_pct':   0.02,
+        'take_profit_pct': 0.03,
+        'min_hold_steps':  1,
+        'total_timesteps': 500_000,
+        'data_file':       'forex_dataset_daily.csv',
+    },
+    '1h': {
+        'stop_loss_pct':   0.005,   # 0.5% — typical 1H ATR is ~0.1-0.3%
+        'take_profit_pct': 0.008,   # 0.8% — keep ~1.6 reward:risk
+        'min_hold_steps':  4,       # hold at least 4 hours before exiting
+        'total_timesteps': 1_500_000,
+        'data_file':       'forex_dataset_1h.csv',
+    },
+}
+
+# =============================================================================
 # FEATURE SETTINGS
 # =============================================================================
 TECHNICAL_INDICATORS = [
@@ -118,19 +141,5 @@ DATA_RAW_PATH = os.path.join(PROJECT_ROOT, 'data', 'raw')
 DATA_PROCESSED_PATH = os.path.join(PROJECT_ROOT, 'data', 'processed')
 DATA_ECONOMIC_PATH = os.path.join(PROJECT_ROOT, 'data', 'economic')
 MODELS_PATH = os.path.join(PROJECT_ROOT, 'models')
-
-# =============================================================================
-# OANDA SETTINGS (practice account)
-# =============================================================================
-OANDA_API_URL = 'https://api-fxpractice.oanda.com'
-
-# Map internal pair names to OANDA instrument format
-OANDA_INSTRUMENTS = {
-    'EURUSD': 'EUR_USD',
-    'USDJPY': 'USD_JPY',
-    'GBPUSD': 'GBP_USD',
-    'AUDUSD': 'AUD_USD',
-    'USDCAD': 'USD_CAD',
-}
 
 LIVE_TRADE_UNITS = 1000  # micro lot (safe for demo account)

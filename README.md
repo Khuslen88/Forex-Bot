@@ -37,7 +37,7 @@ Best agent per pair on the test period (20% holdout, ~2 years):
 
 ### Live Trading
 - **Paper trading:** Simulated trading with real Yahoo Finance prices (no API key needed)
-- **OANDA integration:** REST API wrapper for live demo account trading
+- **MT5 integration (Windows):** MetaTrader 5 wrapper for live demo account trading
 - **Trade logging:** All decisions saved to CSV with timestamps
 - **Streamlit dashboard:** Real-time signals, positions, P&L, and charts
 
@@ -66,7 +66,7 @@ forex-bot/
 │   │   └── evaluate.py       # Metrics, walk-forward validation
 │   └── broker/
 │       ├── paper_client.py   # Paper trading (Yahoo Finance)
-│       └── oanda_client.py   # OANDA REST API wrapper
+│       └── mt5_client.py     # MetaTrader 5 wrapper (Windows)
 ├── models/                   # Saved .zip model files
 ├── demo.py                   # Full training + evaluation pipeline
 ├── live_trader.py            # Live/paper trading script

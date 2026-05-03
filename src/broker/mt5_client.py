@@ -4,7 +4,7 @@ mt5_client.py — Wrapper around MetaTrader 5 Python API for demo account tradin
 Requirements:
   pip install MetaTrader5
   NOTE: Only works on Windows (or Windows VM / Parallels on Mac)
-  MT5 terminal must be running and logged into your OANDA demo account.
+  MT5 terminal must be running and logged into a demo account from any MT5 broker.
 
 Usage:
     client = MT5Client()

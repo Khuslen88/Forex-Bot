@@ -19,6 +19,7 @@ Observation vector (size = window + 2 + N_EXTRA):
 import numpy as np
 from gymnasium import spaces
 from src.environment.forex_env import ForexTradingEnv
+from config.settings import STOP_LOSS_PCT, TAKE_PROFIT_PCT
 
 
 class ForexFeatureEnv(ForexTradingEnv):
@@ -56,8 +57,16 @@ class ForexFeatureEnv(ForexTradingEnv):
         window: int = 20,
         initial_balance: float = 10_000.0,
         trading_cost: float = 0.0001,
+        stop_loss: float = STOP_LOSS_PCT,
+        take_profit: float = TAKE_PROFIT_PCT,
+        min_hold_steps: int = 0,
     ):
-        super().__init__(df, window, initial_balance, trading_cost)
+        super().__init__(
+            df, window, initial_balance, trading_cost,
+            stop_loss=stop_loss,
+            take_profit=take_profit,
+            min_hold_steps=min_hold_steps,
+        )
 
         # Verify the required indicator columns exist
         missing = [c for c in self.INDICATOR_COLS if c not in self.df.columns]

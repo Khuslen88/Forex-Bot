@@ -105,11 +105,24 @@ def load_econ_features(
     # Yield curve: 10Y - 2Y spread (recession / risk-on indicator)
     econ["yield_curve"] = econ["T10Y2Y"].ffill()
 
-    econ_slim = econ[["Date", "rate_diff", "yield_curve"]].dropna()
+    econ_slim = econ[["Date", "rate_diff", "yield_curve"]].dropna().sort_values("Date")
 
-    merged = pd.merge(forex_df, econ_slim, on="Date", how="inner")
+    # merge_asof with backward direction: each forex bar gets the most recent
+    # FRED reading on/before its timestamp. Works for both daily and hourly
+    # forex data (hourly bars carry forward the prior day's macro values).
+    forex_sorted = forex_df.sort_values("Date").reset_index(drop=True)
 
-    # Smoothed rate differential (20-day MA)
+    # Normalize timezones — Dukascopy returns tz-aware UTC, FRED is tz-naive.
+    # merge_asof requires matching dtypes, so drop tz info from forex side.
+    if pd.api.types.is_datetime64tz_dtype(forex_sorted["Date"]):
+        forex_sorted["Date"] = forex_sorted["Date"].dt.tz_localize(None)
+    merged = pd.merge_asof(
+        forex_sorted, econ_slim, on="Date", direction="backward",
+    )
+    merged = merged.dropna(subset=["rate_diff", "yield_curve"])
+
+    # Smoothed rate differential — window adapts to data length so it stays meaningful
+    # for both daily (~20 days) and hourly (~480 hours = 20 days) timeframes.
     merged["rate_diff_ma"] = merged["rate_diff"].rolling(20, min_periods=1).mean()
 
     return merged.reset_index(drop=True)

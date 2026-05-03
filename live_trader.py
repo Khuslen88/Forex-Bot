@@ -1,9 +1,8 @@
 """
 live_trader.py — Connect the trained DQN model to a demo trading account.
 
-Supports three broker backends:
+Supports two broker backends:
   --broker paper  (default — paper trading with Yahoo Finance prices, works on Mac)
-  --broker oanda  (OANDA REST API — requires API key in .env)
   --broker mt5    (MetaTrader 5 — requires Windows + MT5 terminal running)
 
 Usage:
@@ -19,8 +18,11 @@ Usage:
   # Reset paper account:
   python live_trader.py --reset
 
-  # Run continuously, checking every 24 hours:
-  python live_trader.py --pair EURUSD --loop
+  # Run continuously, checking every 24 hours (default):
+  python live_trader.py --pair all --loop
+
+  # Loop with custom interval (e.g. every 1 hour):
+  python live_trader.py --pair all --loop --interval 3600
 
   # Use a specific model:
   python live_trader.py --pair EURUSD --model models/dqn_feature_EURUSD.zip
@@ -29,6 +31,8 @@ Usage:
 import os
 import sys
 import time
+import json
+import signal
 import argparse
 import datetime
 import pandas as pd
@@ -36,12 +40,16 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from stable_baselines3 import DQN
+from stable_baselines3 import DQN, PPO
 from src.features.indicators import add_indicators, load_econ_features
 from src.features.sentiment import add_sentiment_to_df, HAS_TEXTBLOB
-from config.settings import OANDA_INSTRUMENTS, LIVE_TRADE_UNITS, MODELS_PATH, FOREX_PAIRS
+from config.settings import LIVE_TRADE_UNITS, MODELS_PATH, FOREX_PAIRS
 
-ECON_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "economic", "fred_data.csv")
+ROOT = os.path.dirname(os.path.abspath(__file__))
+ECON_PATH = os.path.join(ROOT, "data", "economic", "fred_data.csv")
+STATUS_FILE = os.path.join(ROOT, "bot_runtime.json")
+PID_FILE = os.path.join(ROOT, "bot_runtime.pid")
+REGISTRY_PATH = os.path.join(MODELS_PATH, "registry.json")
 
 
 ACTION_NAMES = {0: "FLAT", 1: "LONG", 2: "SHORT"}
@@ -51,16 +59,55 @@ def parse_args():
     p = argparse.ArgumentParser(description="Forex RL Bot — Live Trader (Demo Account)")
     p.add_argument("--pair", default="EURUSD",
                    help="Currency pair or 'all' for all pairs (default: EURUSD)")
-    p.add_argument("--broker", default="paper", choices=["paper", "oanda", "mt5"],
+    p.add_argument("--broker", default="paper", choices=["paper", "mt5"],
                    help="Broker backend (default: paper)")
     p.add_argument("--model", default=None, help="Path to model .zip (default: auto-detect)")
+    p.add_argument("--use-best", action="store_true",
+                   help="Pick best model per pair from models/registry.json (highest Sharpe)")
     p.add_argument("--units", type=int, default=LIVE_TRADE_UNITS,
                    help=f"Trade size in units (default: {LIVE_TRADE_UNITS})")
     p.add_argument("--dry-run", action="store_true", help="Show signal without placing orders")
-    p.add_argument("--loop", action="store_true", help="Run continuously (check every 24h)")
+    p.add_argument("--loop", action="store_true", help="Run continuously")
+    p.add_argument("--interval", type=int, default=86400,
+                   help="Loop interval in seconds (default 86400 = 24h)")
     p.add_argument("--status", action="store_true", help="Show paper account status and exit")
     p.add_argument("--reset", action="store_true", help="Reset paper account to $100k and exit")
     return p.parse_args()
+
+
+# ── Status file helpers (consumed by the dashboard) ───────────────────────────
+
+def write_status(state: str, **fields):
+    """Write a small JSON file describing what the bot is doing right now."""
+    payload = {
+        "state": state,                          # idle / running / sleeping / stopped
+        "updated_at": datetime.datetime.now().isoformat(timespec="seconds"),
+        "pid": os.getpid(),
+        **fields,
+    }
+    try:
+        with open(STATUS_FILE, "w") as f:
+            json.dump(payload, f, indent=2)
+    except Exception:
+        pass  # don't crash the trader on a status-file error
+
+
+def write_pid():
+    """Write our PID so the dashboard can stop us cleanly."""
+    try:
+        with open(PID_FILE, "w") as f:
+            f.write(str(os.getpid()))
+    except Exception:
+        pass
+
+
+def clear_runtime_files():
+    for path in (STATUS_FILE, PID_FILE):
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+        except Exception:
+            pass
 
 
 def create_client(broker: str):
@@ -72,25 +119,63 @@ def create_client(broker: str):
         from src.broker.mt5_client import MT5Client
         return MT5Client()
     else:
-        from src.broker.oanda_client import OandaClient
-        return OandaClient()
+        raise ValueError(f"Unknown broker: {broker}")
 
 
 def get_symbol(pair: str, broker: str) -> str:
     """Convert pair name to the broker's symbol format."""
-    if broker == "oanda":
-        instrument = OANDA_INSTRUMENTS.get(pair)
-        if not instrument:
-            print(f"ERROR: Unknown pair '{pair}'. Supported: {list(OANDA_INSTRUMENTS.keys())}")
-            sys.exit(1)
-        return instrument
-    else:
-        # Paper and MT5 use plain names like "EURUSD"
-        return pair
+    # Paper and MT5 use plain names like "EURUSD"
+    return pair
 
 
-def load_model(pair: str, model_path: str = None, exit_on_fail: bool = True):
-    """Load the trained DQN model."""
+def _load_registry():
+    if not os.path.exists(REGISTRY_PATH):
+        return None
+    try:
+        with open(REGISTRY_PATH) as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def _resolve_best_model_path(pair: str):
+    """Look up the highest-Sharpe model for `pair` in the registry.
+
+    Returns (path, agent_upper) or (None, None) if no registry / no models.
+    """
+    reg = _load_registry()
+    if reg is None:
+        return None, None
+    candidates = [m for m in reg.get("models", []) if m["pair"] == pair]
+    if not candidates:
+        return None, None
+    best = max(candidates, key=lambda m: m["sharpe_ratio"])
+    suffix = "" if best["timeframe"] == "1d" else f"_{best['timeframe']}"
+    fname = f"{best['agent'].lower()}_feature_{pair}{suffix}.zip"
+    path = os.path.join(MODELS_PATH, fname)
+    if not os.path.exists(path):
+        return None, None
+    return path, best["agent"].upper()
+
+
+def load_model(pair: str, model_path: str = None,
+               use_best: bool = False, exit_on_fail: bool = True):
+    """Load a trained model.
+
+    Resolution order:
+      1. If `model_path` is given, use it (DQN by default; PPO if filename starts with `ppo_`)
+      2. If `use_best=True`, look up the registry's best model for this pair
+      3. Otherwise default to models/dqn_feature_{PAIR}.zip
+    """
+    agent_upper = "DQN"
+
+    if model_path is None and use_best:
+        resolved, agent_upper_resolved = _resolve_best_model_path(pair)
+        if resolved is not None:
+            model_path = resolved
+            agent_upper = agent_upper_resolved
+            print(f"  Best model from registry: {os.path.basename(model_path)}")
+
     if model_path is None:
         model_path = os.path.join(MODELS_PATH, f"dqn_feature_{pair}.zip")
 
@@ -103,8 +188,16 @@ def load_model(pair: str, model_path: str = None, exit_on_fail: bool = True):
             print(f"  SKIP: {msg}")
             return None
 
-    model = DQN.load(model_path)
-    print(f"  Model loaded: {model_path}")
+    # Agent type from filename if not already set
+    fname = os.path.basename(model_path).lower()
+    if fname.startswith("ppo_"):
+        agent_upper = "PPO"
+    elif fname.startswith("dqn_"):
+        agent_upper = "DQN"
+
+    loader = PPO if agent_upper == "PPO" else DQN
+    model = loader.load(model_path)
+    print(f"  Model loaded ({agent_upper}): {model_path}")
     return model
 
 
@@ -254,7 +347,8 @@ def run_pair(pair: str, client, args):
 
     # Load model (skip if missing in multi-pair mode)
     is_multi = args.pair.upper() == "ALL"
-    model = load_model(pair, args.model, exit_on_fail=not is_multi)
+    model = load_model(pair, args.model, use_best=args.use_best,
+                       exit_on_fail=not is_multi)
     if model is None:
         return
 
@@ -334,15 +428,45 @@ def main():
         return
 
     if args.loop:
-        print("Running in loop mode (Ctrl+C to stop) ...")
-        while True:
-            try:
+        write_pid()
+        interval = max(60, int(args.interval))
+        print(f"Running in loop mode every {interval}s (Ctrl+C to stop) ...")
+
+        # Handle SIGTERM (e.g. from dashboard "Stop Bot" button) like Ctrl+C
+        def _graceful_stop(signum, frame):
+            print("\nReceived stop signal — shutting down cleanly.")
+            write_status("stopped")
+            clear_runtime_files()
+            sys.exit(0)
+        signal.signal(signal.SIGTERM, _graceful_stop)
+
+        try:
+            while True:
+                cycle_start = datetime.datetime.now()
+                write_status(
+                    "running",
+                    pair=args.pair,
+                    broker=args.broker,
+                    interval=interval,
+                    cycle_started_at=cycle_start.isoformat(timespec="seconds"),
+                )
                 run_once(args)
-                print("  Sleeping 24 hours until next check ...")
-                time.sleep(86400)
-            except KeyboardInterrupt:
-                print("\nStopped by user.")
-                break
+
+                next_run = cycle_start + datetime.timedelta(seconds=interval)
+                write_status(
+                    "sleeping",
+                    pair=args.pair,
+                    broker=args.broker,
+                    interval=interval,
+                    last_cycle_at=cycle_start.isoformat(timespec="seconds"),
+                    next_cycle_at=next_run.isoformat(timespec="seconds"),
+                )
+                print(f"  Sleeping {interval}s until next check (next: {next_run:%H:%M:%S}) ...")
+                time.sleep(interval)
+        except KeyboardInterrupt:
+            print("\nStopped by user.")
+            write_status("stopped")
+            clear_runtime_files()
     else:
         run_once(args)
 

@@ -38,6 +38,7 @@ class ForexTradingEnv(gym.Env):
         trading_cost: float = 0.0001,
         stop_loss: float = STOP_LOSS_PCT,
         take_profit: float = TAKE_PROFIT_PCT,
+        min_hold_steps: int = 0,
     ):
         super().__init__()
 
@@ -47,6 +48,7 @@ class ForexTradingEnv(gym.Env):
         self.trading_cost = trading_cost
         self.stop_loss = stop_loss
         self.take_profit = take_profit
+        self.min_hold_steps = min_hold_steps
         self.prices = self.df["Close"].values.astype(np.float64)
 
         # ── Action space: Flat / Long / Short ─────────────────────────────
@@ -99,6 +101,15 @@ class ForexTradingEnv(gym.Env):
 
         # Map discrete action → position target
         target_position = {0: 0, 1: 1, 2: -1}[action]
+
+        # Enforce minimum hold duration — block position changes too soon
+        # (SL/TP can still close positions; this only restricts agent decisions)
+        if (
+            self.position != 0
+            and target_position != self.position
+            and self.steps_in_position < self.min_hold_steps
+        ):
+            target_position = self.position  # force-hold
 
         # Detect position change
         position_changed = target_position != self.position

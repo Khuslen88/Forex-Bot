@@ -20,6 +20,7 @@ Run from the forex-bot/ directory:
 import os
 import sys
 import argparse
+from functools import partial
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
@@ -33,7 +34,22 @@ from src.agents.dqn_agent          import train_dqn, run_dqn, load_dqn
 from src.agents.ppo_agent          import train_ppo, run_ppo, load_ppo
 from src.backtesting.evaluate      import compute_metrics, print_comparison, meets_targets, walk_forward_test
 from src.environment.feature_env   import ForexFeatureEnv
-from config.settings               import TRAIN_TEST_SPLIT, TOTAL_TIMESTEPS, MODELS_PATH
+from config.settings               import TRAIN_TEST_SPLIT, TOTAL_TIMESTEPS, MODELS_PATH, TIMEFRAME_CONFIGS
+
+
+def _make_env_factory(timeframe: str):
+    """Build a callable env factory pre-bound with timeframe-specific SL/TP/min_hold.
+
+    Returned object behaves like a class: factory(df) → ForexFeatureEnv(df, ...).
+    Compatible with train_fn(env_class=...) which calls env_class(df).
+    """
+    cfg = TIMEFRAME_CONFIGS[timeframe]
+    return partial(
+        ForexFeatureEnv,
+        stop_loss=cfg["stop_loss_pct"],
+        take_profit=cfg["take_profit_pct"],
+        min_hold_steps=cfg["min_hold_steps"],
+    )
 
 
 # ── CLI arguments ──────────────────────────────────────────────────────────────
@@ -42,6 +58,8 @@ def parse_args():
     p = argparse.ArgumentParser(description="Forex RL Bot — MVP Demo")
     p.add_argument("--pair",  default="EURUSD", help="Currency pair (default: EURUSD)")
     p.add_argument("--agent", default="dqn", choices=["dqn", "ppo"], help="RL agent: dqn or ppo (default: dqn)")
+    p.add_argument("--timeframe", default="1d", choices=list(TIMEFRAME_CONFIGS.keys()),
+                   help="Candle timeframe: 1d (daily) or 1h (hourly). Default: 1d")
     p.add_argument("--quick", action="store_true", help="Train for only 20k steps (fast test)")
     p.add_argument("--load",  default=None,  help="Path to a pre-trained model .zip file")
     p.add_argument("--seeds", type=int, default=1, help="Train N models with different seeds, keep best (default: 1)")
@@ -50,10 +68,11 @@ def parse_args():
 
 # ── Data loading ───────────────────────────────────────────────────────────────
 
-def load_data(pair: str) -> pd.DataFrame:
-    data_path = os.path.join(os.path.dirname(__file__), "data", "raw", "forex_dataset_daily.csv")
+def load_data(pair: str, timeframe: str = "1d") -> pd.DataFrame:
+    data_file = TIMEFRAME_CONFIGS[timeframe]["data_file"]
+    data_path = os.path.join(os.path.dirname(__file__), "data", "raw", data_file)
     econ_path = os.path.join(os.path.dirname(__file__), "data", "economic", "fred_data.csv")
-    print(f"\n[1/5] Loading data: {pair}")
+    print(f"\n[1/5] Loading data: {pair}  (timeframe={timeframe}, file={data_file})")
     raw = pd.read_csv(data_path)
 
     use_econ = os.path.exists(econ_path)
@@ -98,23 +117,28 @@ def _agent_funcs(agent_name):
 def get_model(args, train_df, val_df, pair):
     agent = args.agent
     agent_upper = agent.upper()
+    timeframe = args.timeframe
     train_fn, run_fn, load_fn = _agent_funcs(agent)
+    env_factory = _make_env_factory(timeframe)
 
     if args.load:
         print(f"\n[3/5] Loading pre-trained model: {args.load}")
         from src.environment.forex_env import ForexTradingEnv
-        env_cls = ForexFeatureEnv if "feature" in os.path.basename(args.load) else ForexTradingEnv
-        print(f"      Env: {'ForexFeatureEnv (28-dim)' if env_cls is ForexFeatureEnv else 'ForexTradingEnv (22-dim)'}")
+        env_cls = env_factory if "feature" in os.path.basename(args.load) else ForexTradingEnv
         return load_fn(args.load, train_df, env_class=env_cls), env_cls
 
-    timesteps = 20_000 if args.quick else TOTAL_TIMESTEPS
-    save_path = os.path.join(MODELS_PATH, f"{agent}_feature_{pair}.zip")
+    cfg = TIMEFRAME_CONFIGS[timeframe]
+    timesteps = 20_000 if args.quick else cfg["total_timesteps"]
+    suffix = "" if timeframe == "1d" else f"_{timeframe}"
+    save_path = os.path.join(MODELS_PATH, f"{agent}_feature_{pair}{suffix}.zip")
     n_seeds = args.seeds
 
     if n_seeds > 1:
-        return _train_multi_seed(train_df, val_df, pair, timesteps, save_path, n_seeds, agent)
+        return _train_multi_seed(train_df, val_df, pair, timesteps, save_path, n_seeds, agent, env_factory)
 
-    print(f"\n[3/5] Training {agent_upper} (feature env) on {pair}  ({timesteps:,} timesteps)")
+    print(f"\n[3/5] Training {agent_upper} ({timeframe}) on {pair}  ({timesteps:,} timesteps)")
+    print(f"      SL: {cfg['stop_loss_pct']*100:.2f}%  TP: {cfg['take_profit_pct']*100:.2f}%  "
+          f"min_hold: {cfg['min_hold_steps']} bars")
     print(f"      Save path: {save_path}")
 
     model, _ = train_fn(
@@ -123,15 +147,17 @@ def get_model(args, train_df, val_df, pair):
         total_timesteps=timesteps,
         save_path=save_path,
         verbose=1,
-        env_class=ForexFeatureEnv,
+        env_class=env_factory,
     )
-    return model, ForexFeatureEnv
+    return model, env_factory
 
 
-def _train_multi_seed(train_df, val_df, pair, timesteps, save_path, n_seeds, agent="dqn"):
+def _train_multi_seed(train_df, val_df, pair, timesteps, save_path, n_seeds, agent="dqn", env_factory=None):
     """Train N models with different random seeds, keep the best by validation Sharpe."""
     agent_upper = agent.upper()
     train_fn, run_fn, _ = _agent_funcs(agent)
+    if env_factory is None:
+        env_factory = ForexFeatureEnv
 
     print(f"\n[3/5] Multi-seed training ({agent_upper}): {n_seeds} seeds x {timesteps:,} timesteps on {pair}")
 
@@ -149,11 +175,11 @@ def _train_multi_seed(train_df, val_df, pair, timesteps, save_path, n_seeds, age
             total_timesteps=timesteps,
             save_path=None,  # don't save yet
             verbose=0,
-            env_class=ForexFeatureEnv,
+            env_class=env_factory,
         )
 
         # Evaluate on validation set
-        equity, trades = run_fn(model, val_df, env_class=ForexFeatureEnv)
+        equity, trades = run_fn(model, val_df, env_class=env_factory)
         metrics = compute_metrics(equity, trades)
         sharpe = metrics["sharpe_ratio"]
         ret = metrics["total_return"] * 100
@@ -172,12 +198,12 @@ def _train_multi_seed(train_df, val_df, pair, timesteps, save_path, n_seeds, age
     best_model.save(save_path)
     print(f"      Model saved -> {save_path}")
 
-    return best_model, ForexFeatureEnv
+    return best_model, env_factory
 
 
 # ── Run all strategies on test data ───────────────────────────────────────────
 
-def run_all(model, test_df, env_class=ForexFeatureEnv, agent="dqn", pair="EURUSD"):
+def run_all(model, test_df, env_class=ForexFeatureEnv, agent="dqn", pair="EURUSD", timeframe="1d"):
     agent_upper = agent.upper()
     _, run_fn, _ = _agent_funcs(agent)
 
@@ -203,7 +229,8 @@ def run_all(model, test_df, env_class=ForexFeatureEnv, agent="dqn", pair="EURUSD
     # Also include the OTHER agent if its model exists
     other_agent = "ppo" if agent == "dqn" else "dqn"
     other_upper = other_agent.upper()
-    other_path = os.path.join(MODELS_PATH, f"{other_agent}_feature_{pair}.zip")
+    suffix = "" if timeframe == "1d" else f"_{timeframe}"
+    other_path = os.path.join(MODELS_PATH, f"{other_agent}_feature_{pair}{suffix}.zip")
     if os.path.exists(other_path):
         print(f"      Also loading {other_upper} model for comparison ...")
         _, other_run, other_load = _agent_funcs(other_agent)
@@ -220,7 +247,7 @@ def run_all(model, test_df, env_class=ForexFeatureEnv, agent="dqn", pair="EURUSD
 
 # ── Metrics + chart ────────────────────────────────────────────────────────────
 
-def evaluate_and_chart(strategy_results: dict, test_df: pd.DataFrame, pair: str, agent="dqn"):
+def evaluate_and_chart(strategy_results: dict, test_df: pd.DataFrame, pair: str, agent="dqn", timeframe="1d"):
     agent_upper = agent.upper()
     print("\n[5/5] Computing metrics and generating chart ...")
 
@@ -302,7 +329,8 @@ def evaluate_and_chart(strategy_results: dict, test_df: pd.DataFrame, pair: str,
     fig.update_yaxes(title_text="Portfolio Value ($)", row=1, col=1)
     fig.update_yaxes(title_text="Price", row=2, col=1)
 
-    chart_path = os.path.join(os.path.dirname(__file__), f"results_{pair}.html")
+    suffix = "" if timeframe == "1d" else f"_{timeframe}"
+    chart_path = os.path.join(os.path.dirname(__file__), f"results_{pair}{suffix}.html")
     fig.write_html(chart_path)
     print(f"\nChart saved -> {chart_path}")
     print("Open in your browser to view the interactive equity curves.\n")
@@ -315,19 +343,19 @@ def evaluate_and_chart(strategy_results: dict, test_df: pd.DataFrame, pair: str,
 def run_walk_forward(df: pd.DataFrame, args, pair: str):
     """Run 5-fold walk-forward validation using the selected agent."""
     agent_upper = args.agent.upper()
-    print(f"\n[+] Walk-Forward Validation (5 folds, {agent_upper}) ...")
+    print(f"\n[+] Walk-Forward Validation (5 folds, {agent_upper}, {args.timeframe}) ...")
 
-    from src.environment.feature_env import ForexFeatureEnv as _Env
+    env_factory = _make_env_factory(args.timeframe)
     train_fn, run_fn, _ = _agent_funcs(args.agent)
 
     def _train(train_df):
         timesteps = 20_000 if args.quick else 60_000
         model, _ = train_fn(train_df, total_timesteps=timesteps, verbose=0,
-                             env_class=_Env)
+                             env_class=env_factory)
         return model
 
     def _run(model, test_df):
-        return run_fn(model, test_df, env_class=_Env)
+        return run_fn(model, test_df, env_class=env_factory)
 
     results = walk_forward_test(df, _train, _run, n_splits=5)
     return results
@@ -336,19 +364,20 @@ def run_walk_forward(df: pd.DataFrame, args, pair: str):
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 def main():
-    args  = parse_args()
-    pair  = args.pair.upper()
-    agent = args.agent
+    args      = parse_args()
+    pair      = args.pair.upper()
+    agent     = args.agent
+    timeframe = args.timeframe
 
     print("=" * 60)
-    print(f"  Forex RL Bot — MVP Demo  |  Pair: {pair}  |  Agent: {agent.upper()}")
+    print(f"  Forex RL Bot — MVP Demo  |  Pair: {pair}  |  Agent: {agent.upper()}  |  TF: {timeframe}")
     print("=" * 60)
 
-    df                = load_data(pair)
+    df                = load_data(pair, timeframe=timeframe)
     train_df, test_df = split(df)
     model, env_class  = get_model(args, train_df, test_df, pair)
-    strategy_results  = run_all(model, test_df, env_class=env_class, agent=agent, pair=pair)
-    evaluate_and_chart(strategy_results, test_df, pair, agent=agent)
+    strategy_results  = run_all(model, test_df, env_class=env_class, agent=agent, pair=pair, timeframe=timeframe)
+    evaluate_and_chart(strategy_results, test_df, pair, agent=agent, timeframe=timeframe)
 
     run_walk_forward(df, args, pair)
 
