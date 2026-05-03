@@ -21,6 +21,8 @@ build/
 # Models (large files)
 models/*.zip
 models/*.pkl
+models/**/*.zip
+models/**/*.pkl
 *.h5
 
 # Data (large files) - keep in raw/
