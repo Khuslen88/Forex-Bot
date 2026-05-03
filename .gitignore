@@ -50,3 +50,10 @@ trade_log.csv
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Scaffolded React/FastAPI webapp (future work — Streamlit is the active dashboard)
+webapp/
+
+# Bot runtime state files
+bot_runtime.json
+bot_runtime.pid
