@@ -18,12 +18,19 @@ build/
 *.ipynb_checkpoints
 .jupyter/
 
-# Models (large files)
+# Models (large files) — exclude all except the 5 production models
 models/*.zip
 models/*.pkl
 models/**/*.zip
 models/**/*.pkl
 *.h5
+
+# Whitelist: production models committed for Streamlit Cloud deployment
+!models/dqn_feature_EURUSD_wavelet.zip
+!models/dqn_feature_GBPUSD_wavelet.zip
+!models/dqn_feature_USDCAD_wavelet.zip
+!models/dqn_feature_AUDUSD_wavelet.zip
+!models/dqn_feature_USDJPY.zip
 
 # Data (large files) - keep in raw/
 data/processed/*.csv

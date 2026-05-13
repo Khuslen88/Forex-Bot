@@ -24,7 +24,12 @@ import numpy as np
 import streamlit as st
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from streamlit_autorefresh import st_autorefresh
+try:
+    from streamlit_autorefresh import st_autorefresh
+    _HAS_AUTOREFRESH = True
+except ImportError:
+    st_autorefresh = None
+    _HAS_AUTOREFRESH = False
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -41,6 +46,12 @@ ECON_PATH     = os.path.join(ROOT, "data", "economic", "fred_data.csv")
 REGISTRY_PATH = os.path.join(MODELS_PATH, "registry.json")
 STATUS_FILE   = os.path.join(ROOT, "bot_runtime.json")
 PID_FILE      = os.path.join(ROOT, "bot_runtime.pid")
+
+# On Streamlit Cloud we can't spawn background processes or persist PID files.
+# Detect cloud by checking the environment variable Streamlit sets.
+_IS_CLOUD = bool(os.environ.get("STREAMLIT_SHARING_MODE") or
+                 os.environ.get("IS_STREAMLIT_CLOUD") or
+                 "/mount/src/" in ROOT)
 LIVE_TRADER   = os.path.join(ROOT, "live_trader.py")
 
 ACTION_NAMES  = {0: "FLAT", 1: "LONG", 2: "SHORT"}
@@ -299,7 +310,7 @@ st.sidebar.caption("Capstone — Spring 2026")
 
 st.sidebar.markdown("---")
 auto_refresh = st.sidebar.checkbox("Auto-refresh (30s)", value=True)
-if auto_refresh:
+if auto_refresh and _HAS_AUTOREFRESH:
     st_autorefresh(interval=30_000, key="auto_refresh")
 
 if st.sidebar.button("Refresh Now", use_container_width=True):
@@ -312,7 +323,14 @@ st.sidebar.markdown("**Bot Control**")
 bot_alive = is_bot_alive()
 bot_status = read_bot_status() or {}
 
-if bot_alive:
+if _IS_CLOUD:
+    st.sidebar.markdown(
+        '<div class="status-pill pill-amber">DEMO MODE</div>',
+        unsafe_allow_html=True,
+    )
+    st.sidebar.caption("Live bot requires local deployment. "
+                       "Signals and paper trading are fully functional.")
+elif bot_alive:
     pill_class = {
         "running":  "pill-green",
         "sleeping": "pill-amber",
@@ -344,11 +362,13 @@ bot_interval = st.sidebar.select_slider(
 bot_dry = st.sidebar.checkbox("Dry run (signals only, no trades)", value=True)
 
 ctrl_a, ctrl_b = st.sidebar.columns(2)
-if ctrl_a.button("Start", type="primary", use_container_width=True, disabled=bot_alive):
+if ctrl_a.button("Start", type="primary", use_container_width=True,
+                 disabled=(bot_alive or _IS_CLOUD)):
     msg = start_bot(bot_pair, bot_interval, bot_dry, bot_units)
     st.sidebar.success(msg)
     st.rerun()
-if ctrl_b.button("Stop", use_container_width=True, disabled=not bot_alive):
+if ctrl_b.button("Stop", use_container_width=True,
+                 disabled=(not bot_alive or _IS_CLOUD)):
     msg = stop_bot()
     st.sidebar.info(msg)
     st.rerun()

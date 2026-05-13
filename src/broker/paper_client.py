@@ -14,10 +14,14 @@ import datetime
 import pandas as pd
 import yfinance as yf
 
-STATE_FILE = os.path.join(
+_DEFAULT_STATE_DIR = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
-    "..", "..", "paper_account.json",
+    "..", "..",
 )
+# On Streamlit Cloud the repo root is read-only; write state to /tmp instead.
+if "/mount/src/" in _DEFAULT_STATE_DIR or not os.access(_DEFAULT_STATE_DIR, os.W_OK):
+    _DEFAULT_STATE_DIR = "/tmp"
+STATE_FILE = os.path.join(_DEFAULT_STATE_DIR, "paper_account.json")
 
 # Yahoo Finance symbols for forex pairs
 YAHOO_SYMBOLS = {
