@@ -92,13 +92,18 @@ def load_registry() -> dict:
 
 
 def best_model_for_pair(pair: str, registry: dict, prefer_production: bool = True):
-    """Return the highest-Sharpe model for the pair.
+    """Return the highest-Sharpe model for the pair, weighted by walk-forward.
 
-    With prefer_production (default), only consider daily/v1 models — including
-    the wavelet-denoised variants that beat baseline on weak pairs. 1H and v2
-    env experiments underperformed and are excluded.
+    Production filter (default): daily/v1, denoise in {none, wavelet}, EMD/1H/v2
+    experiments excluded.
 
-    Set False to include 1H / v2 / EMD in the search.
+    Selection rule (when prefer_production):
+      1. Try models with walk-forward Sharpe >= 0 (real out-of-sample evidence).
+         Among those, pick highest test Sharpe.
+      2. If none qualify, fall back to highest test Sharpe overall.
+
+    This filters out wavelet variants that overfit the test slice — e.g. PPO
+    USDJPY wavelet scored test +3.74 but walk-forward -1.10.
     """
     candidates = [m for m in registry.get("models", []) if m["pair"] == pair]
     if prefer_production:
@@ -110,6 +115,14 @@ def best_model_for_pair(pair: str, registry: dict, prefer_production: bool = Tru
             candidates = prod
     if not candidates:
         return None
+
+    if prefer_production:
+        # Treat missing WF data as 0 (older models pre-WF-logging). Only
+        # exclude models with EXPLICITLY negative walk-forward Sharpe.
+        wf_ok = [m for m in candidates
+                 if (m.get("wf_sharpe") is None or m["wf_sharpe"] >= 0)]
+        if wf_ok:
+            return max(wf_ok, key=lambda m: m["sharpe_ratio"])
     return max(candidates, key=lambda m: m["sharpe_ratio"])
 
 

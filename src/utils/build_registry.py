@@ -8,6 +8,7 @@ Run after training to refresh the registry:
 """
 
 import os
+import re
 import sys
 import json
 import glob
@@ -31,6 +32,60 @@ from config.settings               import (TRAIN_TEST_SPLIT, TIMEFRAME_CONFIGS, 
 REGISTRY_PATH = os.path.join(MODELS_PATH, "registry.json")
 DATA_DIR      = os.path.join(ROOT, "data", "raw")
 ECON_PATH     = os.path.join(ROOT, "data", "economic", "fred_data.csv")
+LOGS_DIR      = os.path.join(ROOT, "logs")
+
+# Regex to extract walk-forward Sharpe from a demo.py training log line:
+#   "Walk-forward aggregate  return=+2.1%  sharpe=0.81  dd=-3.4%  win_rate=54.0%"
+_WF_RE = re.compile(r"Walk-forward aggregate\s+return=([+-]?\d+\.\d+)%\s+sharpe=([+-]?\d+\.\d+)")
+
+
+def find_walk_forward(agent: str, pair: str, timeframe: str,
+                       version: str, denoise: str):
+    """Scan all log directories for the most recent walk-forward Sharpe for this model.
+
+    Returns (wf_sharpe, wf_return_pct) or (None, None) if no log found.
+    """
+    # Candidate log filename patterns across all training rounds
+    candidates = []
+    for sub in os.listdir(LOGS_DIR) if os.path.isdir(LOGS_DIR) else []:
+        sub_path = os.path.join(LOGS_DIR, sub)
+        if not os.path.isdir(sub_path):
+            continue
+        for fname in os.listdir(sub_path):
+            if not fname.endswith(".log"):
+                continue
+            if not fname.startswith(f"{agent.lower()}_{pair}"):
+                continue
+            # Crude filter — accept logs whose name contains the right denoise tag
+            name_lc = fname.lower()
+            if denoise == "wavelet" and "wavelet" not in name_lc:
+                continue
+            if denoise == "emd" and "emd" not in name_lc:
+                continue
+            if denoise == "none" and ("wavelet" in name_lc or "emd" in name_lc):
+                continue
+            if timeframe == "1h" and "_1h" not in name_lc:
+                continue
+            if timeframe == "1d" and "_1h" in name_lc:
+                continue
+            if version == "v2" and "v2" not in name_lc:
+                continue
+            if version == "v1" and "v2" in name_lc:
+                continue
+            candidates.append(os.path.join(sub_path, fname))
+
+    # Use the most recently modified matching log
+    candidates.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+    for path in candidates:
+        try:
+            with open(path) as f:
+                for line in f:
+                    m = _WF_RE.search(line)
+                    if m:
+                        return float(m.group(2)), float(m.group(1))
+        except Exception:
+            continue
+    return None, None
 
 
 def parse_model_filename(filename: str):
@@ -125,6 +180,11 @@ def evaluate_model(model_path: str):
     metrics["n_test_rows"]  = len(test_df)
     metrics["n_trades"]     = len(trades)
     metrics["final_balance"] = float(equity[-1])
+
+    # Walk-forward Sharpe from the most recent matching training log
+    wf_sharpe, wf_return = find_walk_forward(agent, pair, timeframe, version, denoise)
+    metrics["wf_sharpe"]    = wf_sharpe
+    metrics["wf_return"]    = wf_return
     return metrics
 
 

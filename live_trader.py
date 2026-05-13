@@ -139,9 +139,11 @@ def _load_registry():
 
 
 def _resolve_best_model_path(pair: str):
-    """Look up the highest-Sharpe production model for `pair` in the registry.
+    """Look up the highest-Sharpe production model for `pair`, weighted by WF.
 
     Production set: daily timeframe, v1 env, denoise=none|wavelet.
+    Prefers models with walk-forward Sharpe >= 0 (real out-of-sample evidence);
+    falls back to highest test Sharpe only if no model has positive WF.
     Returns (path, agent_upper, denoise_method) or (None, None, None).
     """
     reg = _load_registry()
@@ -154,7 +156,14 @@ def _resolve_best_model_path(pair: str):
                   and m.get("denoise", "none") in ("none", "wavelet")]
     if not candidates:
         return None, None, None
-    best = max(candidates, key=lambda m: m["sharpe_ratio"])
+
+    # Prefer models without explicitly negative walk-forward Sharpe.
+    # Missing WF (older models, pre-logging) is treated as neutral.
+    wf_ok = [m for m in candidates
+             if m.get("wf_sharpe") is None or m["wf_sharpe"] >= 0]
+    pool = wf_ok if wf_ok else candidates
+    best = max(pool, key=lambda m: m["sharpe_ratio"])
+
     den = best.get("denoise", "none")
     den_suffix = "" if den == "none" else f"_{den}"
     fname = f"{best['agent'].lower()}_feature_{pair}{den_suffix}.zip"

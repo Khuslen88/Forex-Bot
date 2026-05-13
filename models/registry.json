@@ -13,10 +13,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_AUDUSD.zip",
       "model_size_kb": 693.4,
-      "computed_at": "2026-05-13T16:16:37",
+      "computed_at": "2026-05-14T02:37:31",
       "n_test_rows": 485,
       "n_trades": 46,
-      "final_balance": 10925.147728171314
+      "final_balance": 10925.147728171314,
+      "wf_sharpe": -0.23,
+      "wf_return": -0.9
     },
     {
       "total_return": 0.21324023588159746,
@@ -31,10 +33,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_AUDUSD_1h.zip",
       "model_size_kb": 690.6,
-      "computed_at": "2026-05-13T16:16:40",
+      "computed_at": "2026-05-14T02:37:33",
       "n_test_rows": 12425,
       "n_trades": 664,
-      "final_balance": 12132.402358815974
+      "final_balance": 12132.402358815974,
+      "wf_sharpe": 0.02,
+      "wf_return": 1.0
     },
     {
       "total_return": 0.0,
@@ -49,10 +53,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_AUDUSD_1h_v2.zip",
       "model_size_kb": 690.6,
-      "computed_at": "2026-05-13T16:16:42",
+      "computed_at": "2026-05-14T02:37:36",
       "n_test_rows": 12425,
       "n_trades": 0,
-      "final_balance": 10000.0
+      "final_balance": 10000.0,
+      "wf_sharpe": -0.28,
+      "wf_return": -10.0
     },
     {
       "total_return": -0.00761931130938831,
@@ -67,10 +73,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_AUDUSD_v2.zip",
       "model_size_kb": 693.4,
-      "computed_at": "2026-05-13T16:16:42",
+      "computed_at": "2026-05-14T02:37:36",
       "n_test_rows": 485,
       "n_trades": 73,
-      "final_balance": 9923.806886906117
+      "final_balance": 9923.806886906117,
+      "wf_sharpe": -0.19,
+      "wf_return": -0.4
     },
     {
       "total_return": 0.3351560760264485,
@@ -85,10 +93,12 @@
       "denoise": "wavelet",
       "model_path": "models/dqn_feature_AUDUSD_wavelet.zip",
       "model_size_kb": 693.4,
-      "computed_at": "2026-05-13T16:16:43",
+      "computed_at": "2026-05-14T02:37:37",
       "n_test_rows": 485,
       "n_trades": 112,
-      "final_balance": 13351.560760264485
+      "final_balance": 13351.560760264485,
+      "wf_sharpe": 0.42,
+      "wf_return": 0.5
     },
     {
       "total_return": 0.14018103136069615,
@@ -103,10 +113,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_EURUSD.zip",
       "model_size_kb": 693.4,
-      "computed_at": "2026-05-13T16:16:43",
+      "computed_at": "2026-05-14T02:37:37",
       "n_test_rows": 485,
       "n_trades": 69,
-      "final_balance": 11401.810313606962
+      "final_balance": 11401.810313606962,
+      "wf_sharpe": 0.19,
+      "wf_return": 0.7
     },
     {
       "total_return": 0.10555514793805831,
@@ -121,10 +133,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_EURUSD_1h.zip",
       "model_size_kb": 690.6,
-      "computed_at": "2026-05-13T16:16:46",
+      "computed_at": "2026-05-14T02:37:40",
       "n_test_rows": 12427,
       "n_trades": 576,
-      "final_balance": 11055.551479380583
+      "final_balance": 11055.551479380583,
+      "wf_sharpe": -0.15,
+      "wf_return": -3.3
     },
     {
       "total_return": 0.03780339966604962,
@@ -139,10 +153,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_EURUSD_1h_v2.zip",
       "model_size_kb": 690.6,
-      "computed_at": "2026-05-13T16:16:48",
+      "computed_at": "2026-05-14T02:37:42",
       "n_test_rows": 12427,
       "n_trades": 674,
-      "final_balance": 10378.033996660495
+      "final_balance": 10378.033996660495,
+      "wf_sharpe": -0.36,
+      "wf_return": -8.2
     },
     {
       "total_return": -0.11281552064083622,
@@ -157,10 +173,32 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_EURUSD_v2.zip",
       "model_size_kb": 693.4,
-      "computed_at": "2026-05-13T16:16:48",
+      "computed_at": "2026-05-14T02:37:42",
       "n_test_rows": 485,
       "n_trades": 82,
-      "final_balance": 8871.844793591637
+      "final_balance": 8871.844793591637,
+      "wf_sharpe": 0.41,
+      "wf_return": 1.7
+    },
+    {
+      "total_return": 0.33065246099529855,
+      "sharpe_ratio": 3.204703980328219,
+      "max_drawdown": -0.03453174069857638,
+      "win_rate": 0.6220472440944882,
+      "profit_factor": 2.594874712829469,
+      "agent": "DQN",
+      "pair": "EURUSD",
+      "timeframe": "1d",
+      "version": "v1",
+      "denoise": "wavelet",
+      "model_path": "models/dqn_feature_EURUSD_wavelet.zip",
+      "model_size_kb": 693.4,
+      "computed_at": "2026-05-14T02:37:43",
+      "n_test_rows": 485,
+      "n_trades": 127,
+      "final_balance": 13306.524609952985,
+      "wf_sharpe": 0.83,
+      "wf_return": 3.1
     },
     {
       "total_return": 0.13925712995023565,
@@ -175,10 +213,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_GBPUSD.zip",
       "model_size_kb": 693.4,
-      "computed_at": "2026-05-13T16:16:48",
+      "computed_at": "2026-05-14T02:37:43",
       "n_test_rows": 485,
       "n_trades": 53,
-      "final_balance": 11392.571299502357
+      "final_balance": 11392.571299502357,
+      "wf_sharpe": -1.21,
+      "wf_return": -5.8
     },
     {
       "total_return": 0.07760986226651978,
@@ -193,10 +233,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_GBPUSD_1h.zip",
       "model_size_kb": 690.6,
-      "computed_at": "2026-05-13T16:16:51",
+      "computed_at": "2026-05-14T02:37:45",
       "n_test_rows": 12426,
       "n_trades": 180,
-      "final_balance": 10776.098622665198
+      "final_balance": 10776.098622665198,
+      "wf_sharpe": -0.15,
+      "wf_return": -5.2
     },
     {
       "total_return": -0.035643684232826156,
@@ -211,10 +253,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_GBPUSD_1h_v2.zip",
       "model_size_kb": 690.6,
-      "computed_at": "2026-05-13T16:16:53",
+      "computed_at": "2026-05-14T02:37:48",
       "n_test_rows": 12426,
       "n_trades": 557,
-      "final_balance": 9643.563157671739
+      "final_balance": 9643.563157671739,
+      "wf_sharpe": -0.26,
+      "wf_return": -7.4
     },
     {
       "total_return": 0.09721559647194788,
@@ -229,10 +273,32 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_GBPUSD_v2.zip",
       "model_size_kb": 693.4,
-      "computed_at": "2026-05-13T16:16:53",
+      "computed_at": "2026-05-14T02:37:48",
       "n_test_rows": 485,
       "n_trades": 72,
-      "final_balance": 10972.155964719479
+      "final_balance": 10972.155964719479,
+      "wf_sharpe": -1.21,
+      "wf_return": -6.1
+    },
+    {
+      "total_return": 0.3533628828445641,
+      "sharpe_ratio": 3.8475688849077976,
+      "max_drawdown": -0.03393496841265457,
+      "win_rate": 0.6129032258064516,
+      "profit_factor": 3.4156306000440977,
+      "agent": "DQN",
+      "pair": "GBPUSD",
+      "timeframe": "1d",
+      "version": "v1",
+      "denoise": "wavelet",
+      "model_path": "models/dqn_feature_GBPUSD_wavelet.zip",
+      "model_size_kb": 693.4,
+      "computed_at": "2026-05-14T02:37:49",
+      "n_test_rows": 485,
+      "n_trades": 93,
+      "final_balance": 13533.62882844564,
+      "wf_sharpe": 0.08,
+      "wf_return": 0.5
     },
     {
       "total_return": 0.1149258055465785,
@@ -247,10 +313,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_USDCAD.zip",
       "model_size_kb": 692.9,
-      "computed_at": "2026-05-13T16:16:53",
+      "computed_at": "2026-05-14T02:37:49",
       "n_test_rows": 485,
       "n_trades": 67,
-      "final_balance": 11149.258055465785
+      "final_balance": 11149.258055465785,
+      "wf_sharpe": null,
+      "wf_return": null
     },
     {
       "total_return": 0.06470221938639975,
@@ -265,10 +333,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_USDCAD_1h.zip",
       "model_size_kb": 690.6,
-      "computed_at": "2026-05-13T16:16:56",
+      "computed_at": "2026-05-14T02:37:51",
       "n_test_rows": 12425,
       "n_trades": 125,
-      "final_balance": 10647.022193863997
+      "final_balance": 10647.022193863997,
+      "wf_sharpe": -0.1,
+      "wf_return": -2.7
     },
     {
       "total_return": 0.0,
@@ -283,10 +353,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_USDCAD_1h_v2.zip",
       "model_size_kb": 690.6,
-      "computed_at": "2026-05-13T16:16:58",
+      "computed_at": "2026-05-14T02:37:54",
       "n_test_rows": 12425,
       "n_trades": 0,
-      "final_balance": 10000.0
+      "final_balance": 10000.0,
+      "wf_sharpe": -0.19,
+      "wf_return": -4.3
     },
     {
       "total_return": -0.014724263300782914,
@@ -301,10 +373,32 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_USDCAD_v2.zip",
       "model_size_kb": 693.4,
-      "computed_at": "2026-05-13T16:16:58",
+      "computed_at": "2026-05-14T02:37:54",
       "n_test_rows": 485,
       "n_trades": 72,
-      "final_balance": 9852.757366992171
+      "final_balance": 9852.757366992171,
+      "wf_sharpe": -0.19,
+      "wf_return": -0.0
+    },
+    {
+      "total_return": 0.19155306940580785,
+      "sharpe_ratio": 2.4598032814470963,
+      "max_drawdown": -0.03707033211088392,
+      "win_rate": 0.574468085106383,
+      "profit_factor": 2.2643245993972467,
+      "agent": "DQN",
+      "pair": "USDCAD",
+      "timeframe": "1d",
+      "version": "v1",
+      "denoise": "wavelet",
+      "model_path": "models/dqn_feature_USDCAD_wavelet.zip",
+      "model_size_kb": 693.4,
+      "computed_at": "2026-05-14T02:37:54",
+      "n_test_rows": 485,
+      "n_trades": 94,
+      "final_balance": 11915.53069405808,
+      "wf_sharpe": 0.81,
+      "wf_return": 2.1
     },
     {
       "total_return": 0.231753206702642,
@@ -319,10 +413,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_USDJPY.zip",
       "model_size_kb": 692.9,
-      "computed_at": "2026-05-13T16:16:58",
+      "computed_at": "2026-05-14T02:37:54",
       "n_test_rows": 485,
       "n_trades": 95,
-      "final_balance": 12317.532067026421
+      "final_balance": 12317.532067026421,
+      "wf_sharpe": null,
+      "wf_return": null
     },
     {
       "total_return": -0.009258067382716395,
@@ -337,10 +433,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_USDJPY_1h.zip",
       "model_size_kb": 690.6,
-      "computed_at": "2026-05-13T16:17:01",
+      "computed_at": "2026-05-14T02:37:57",
       "n_test_rows": 12427,
       "n_trades": 330,
-      "final_balance": 9907.419326172836
+      "final_balance": 9907.419326172836,
+      "wf_sharpe": -0.11,
+      "wf_return": -3.0
     },
     {
       "total_return": -0.05584507042704567,
@@ -355,10 +453,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_USDJPY_1h_v2.zip",
       "model_size_kb": 690.6,
-      "computed_at": "2026-05-13T16:17:03",
+      "computed_at": "2026-05-14T02:37:59",
       "n_test_rows": 12427,
       "n_trades": 750,
-      "final_balance": 9441.549295729543
+      "final_balance": 9441.549295729543,
+      "wf_sharpe": -0.17,
+      "wf_return": -4.8
     },
     {
       "total_return": 0.1739013947966137,
@@ -373,10 +473,32 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_USDJPY_v2.zip",
       "model_size_kb": 693.4,
-      "computed_at": "2026-05-13T16:17:03",
+      "computed_at": "2026-05-14T02:37:59",
       "n_test_rows": 485,
       "n_trades": 64,
-      "final_balance": 11739.013947966137
+      "final_balance": 11739.013947966137,
+      "wf_sharpe": -0.25,
+      "wf_return": -1.2
+    },
+    {
+      "total_return": 0.29691140703206265,
+      "sharpe_ratio": 2.1386156579425624,
+      "max_drawdown": -0.057767822021480404,
+      "win_rate": 0.6145833333333334,
+      "profit_factor": 2.11612277106695,
+      "agent": "DQN",
+      "pair": "USDJPY",
+      "timeframe": "1d",
+      "version": "v1",
+      "denoise": "wavelet",
+      "model_path": "models/dqn_feature_USDJPY_wavelet.zip",
+      "model_size_kb": 693.4,
+      "computed_at": "2026-05-14T02:38:00",
+      "n_test_rows": 485,
+      "n_trades": 96,
+      "final_balance": 12969.114070320626,
+      "wf_sharpe": -0.39,
+      "wf_return": -1.5
     },
     {
       "total_return": -0.000355886992701393,
@@ -391,10 +513,12 @@
       "denoise": "none",
       "model_path": "models/ppo_feature_AUDUSD.zip",
       "model_size_kb": 1027.0,
-      "computed_at": "2026-05-13T16:17:04",
+      "computed_at": "2026-05-14T02:38:00",
       "n_test_rows": 485,
       "n_trades": 27,
-      "final_balance": 9996.441130072986
+      "final_balance": 9996.441130072986,
+      "wf_sharpe": -0.66,
+      "wf_return": -3.7
     },
     {
       "total_return": 0.2082695560533121,
@@ -409,10 +533,12 @@
       "denoise": "none",
       "model_path": "models/ppo_feature_AUDUSD_1h.zip",
       "model_size_kb": 1024.2,
-      "computed_at": "2026-05-13T16:17:06",
+      "computed_at": "2026-05-14T02:38:03",
       "n_test_rows": 12425,
       "n_trades": 336,
-      "final_balance": 12082.69556053312
+      "final_balance": 12082.69556053312,
+      "wf_sharpe": -0.16,
+      "wf_return": -5.4
     },
     {
       "total_return": -0.05985475981095656,
@@ -427,10 +553,12 @@
       "denoise": "none",
       "model_path": "models/ppo_feature_AUDUSD_1h_v2.zip",
       "model_size_kb": 1024.2,
-      "computed_at": "2026-05-13T16:17:09",
+      "computed_at": "2026-05-14T02:38:06",
       "n_test_rows": 12425,
       "n_trades": 767,
-      "final_balance": 9401.452401890434
+      "final_balance": 9401.452401890434,
+      "wf_sharpe": -0.33,
+      "wf_return": -13.2
     },
     {
       "total_return": 0.03872918688024507,
@@ -445,10 +573,12 @@
       "denoise": "none",
       "model_path": "models/ppo_feature_AUDUSD_v2.zip",
       "model_size_kb": 1027.0,
-      "computed_at": "2026-05-13T16:17:09",
+      "computed_at": "2026-05-14T02:38:06",
       "n_test_rows": 485,
       "n_trades": 34,
-      "final_balance": 10387.291868802451
+      "final_balance": 10387.291868802451,
+      "wf_sharpe": -0.63,
+      "wf_return": -2.8
     },
     {
       "total_return": 0.4888051718574391,
@@ -463,10 +593,12 @@
       "denoise": "wavelet",
       "model_path": "models/ppo_feature_AUDUSD_wavelet.zip",
       "model_size_kb": 1027.0,
-      "computed_at": "2026-05-13T16:17:10",
+      "computed_at": "2026-05-14T02:38:07",
       "n_test_rows": 485,
       "n_trades": 119,
-      "final_balance": 14888.05171857439
+      "final_balance": 14888.05171857439,
+      "wf_sharpe": -0.24,
+      "wf_return": -1.2
     },
     {
       "total_return": -0.032121092131612405,
@@ -481,10 +613,12 @@
       "denoise": "none",
       "model_path": "models/ppo_feature_EURUSD.zip",
       "model_size_kb": 1027.0,
-      "computed_at": "2026-05-13T16:17:10",
+      "computed_at": "2026-05-14T02:38:07",
       "n_test_rows": 485,
       "n_trades": 51,
-      "final_balance": 9678.789078683876
+      "final_balance": 9678.789078683876,
+      "wf_sharpe": -0.19,
+      "wf_return": -0.9
     },
     {
       "total_return": -0.0599882030483917,
@@ -499,10 +633,12 @@
       "denoise": "none",
       "model_path": "models/ppo_feature_EURUSD_1h.zip",
       "model_size_kb": 1024.2,
-      "computed_at": "2026-05-13T16:17:13",
+      "computed_at": "2026-05-14T02:38:10",
       "n_test_rows": 12427,
       "n_trades": 108,
-      "final_balance": 9400.117969516083
+      "final_balance": 9400.117969516083,
+      "wf_sharpe": -0.1,
+      "wf_return": -2.6
     },
     {
       "total_return": -0.16257045550621974,
@@ -517,10 +653,12 @@
       "denoise": "none",
       "model_path": "models/ppo_feature_EURUSD_1h_v2.zip",
       "model_size_kb": 1024.2,
-      "computed_at": "2026-05-13T16:17:16",
+      "computed_at": "2026-05-14T02:38:13",
       "n_test_rows": 12427,
       "n_trades": 737,
-      "final_balance": 8374.295444937803
+      "final_balance": 8374.295444937803,
+      "wf_sharpe": -0.22,
+      "wf_return": -4.7
     },
     {
       "total_return": -0.11502835007017165,
@@ -535,10 +673,32 @@
       "denoise": "none",
       "model_path": "models/ppo_feature_EURUSD_v2.zip",
       "model_size_kb": 1027.0,
-      "computed_at": "2026-05-13T16:17:16",
+      "computed_at": "2026-05-14T02:38:13",
       "n_test_rows": 485,
       "n_trades": 57,
-      "final_balance": 8849.716499298283
+      "final_balance": 8849.716499298283,
+      "wf_sharpe": -0.31,
+      "wf_return": -1.2
+    },
+    {
+      "total_return": 0.2993128932512732,
+      "sharpe_ratio": 2.7687958405654722,
+      "max_drawdown": -0.034422152853880755,
+      "win_rate": 0.6095238095238096,
+      "profit_factor": 2.533823229776916,
+      "agent": "PPO",
+      "pair": "EURUSD",
+      "timeframe": "1d",
+      "version": "v1",
+      "denoise": "wavelet",
+      "model_path": "models/ppo_feature_EURUSD_wavelet.zip",
+      "model_size_kb": 1027.0,
+      "computed_at": "2026-05-14T02:38:14",
+      "n_test_rows": 485,
+      "n_trades": 105,
+      "final_balance": 12993.12893251273,
+      "wf_sharpe": -0.34,
+      "wf_return": -1.0
     },
     {
       "total_return": 0.10779019921134969,
@@ -553,10 +713,12 @@
       "denoise": "none",
       "model_path": "models/ppo_feature_GBPUSD.zip",
       "model_size_kb": 1027.0,
-      "computed_at": "2026-05-13T16:17:16",
+      "computed_at": "2026-05-14T02:38:14",
       "n_test_rows": 485,
       "n_trades": 49,
-      "final_balance": 11077.901992113497
+      "final_balance": 11077.901992113497,
+      "wf_sharpe": -0.95,
+      "wf_return": -3.9
     },
     {
       "total_return": 0.048159552937021566,
@@ -571,10 +733,12 @@
       "denoise": "none",
       "model_path": "models/ppo_feature_GBPUSD_1h.zip",
       "model_size_kb": 1024.2,
-      "computed_at": "2026-05-13T16:17:19",
+      "computed_at": "2026-05-14T02:38:17",
       "n_test_rows": 12426,
       "n_trades": 198,
-      "final_balance": 10481.595529370215
+      "final_balance": 10481.595529370215,
+      "wf_sharpe": -0.24,
+      "wf_return": -4.2
     },
     {
       "total_return": -0.17341883114455636,
@@ -589,10 +753,12 @@
       "denoise": "none",
       "model_path": "models/ppo_feature_GBPUSD_1h_v2.zip",
       "model_size_kb": 1024.2,
-      "computed_at": "2026-05-13T16:17:21",
+      "computed_at": "2026-05-14T02:38:19",
       "n_test_rows": 12426,
       "n_trades": 750,
-      "final_balance": 8265.811688554437
+      "final_balance": 8265.811688554437,
+      "wf_sharpe": -0.27,
+      "wf_return": -8.2
     },
     {
       "total_return": -0.05690709946627426,
@@ -607,10 +773,32 @@
       "denoise": "none",
       "model_path": "models/ppo_feature_GBPUSD_v2.zip",
       "model_size_kb": 1027.0,
-      "computed_at": "2026-05-13T16:17:22",
+      "computed_at": "2026-05-14T02:38:20",
       "n_test_rows": 485,
       "n_trades": 31,
-      "final_balance": 9430.929005337257
+      "final_balance": 9430.929005337257,
+      "wf_sharpe": -0.84,
+      "wf_return": -3.8
+    },
+    {
+      "total_return": 0.3268807374002418,
+      "sharpe_ratio": 3.456922334100471,
+      "max_drawdown": -0.025616515851963603,
+      "win_rate": 0.5319148936170213,
+      "profit_factor": 3.6363805487572423,
+      "agent": "PPO",
+      "pair": "GBPUSD",
+      "timeframe": "1d",
+      "version": "v1",
+      "denoise": "wavelet",
+      "model_path": "models/ppo_feature_GBPUSD_wavelet.zip",
+      "model_size_kb": 1027.0,
+      "computed_at": "2026-05-14T02:38:20",
+      "n_test_rows": 485,
+      "n_trades": 94,
+      "final_balance": 13268.80737400242,
+      "wf_sharpe": -0.6,
+      "wf_return": -1.8
     },
     {
       "total_return": 0.13981857145932497,
@@ -625,10 +813,12 @@
       "denoise": "none",
       "model_path": "models/ppo_feature_USDCAD.zip",
       "model_size_kb": 1026.3,
-      "computed_at": "2026-05-13T16:17:22",
+      "computed_at": "2026-05-14T02:38:20",
       "n_test_rows": 485,
       "n_trades": 56,
-      "final_balance": 11398.18571459325
+      "final_balance": 11398.18571459325,
+      "wf_sharpe": null,
+      "wf_return": null
     },
     {
       "total_return": -0.01312974485177787,
@@ -643,10 +833,12 @@
       "denoise": "none",
       "model_path": "models/ppo_feature_USDCAD_1h.zip",
       "model_size_kb": 1024.2,
-      "computed_at": "2026-05-13T16:17:24",
+      "computed_at": "2026-05-14T02:38:23",
       "n_test_rows": 12425,
       "n_trades": 115,
-      "final_balance": 9868.702551482222
+      "final_balance": 9868.702551482222,
+      "wf_sharpe": -0.3,
+      "wf_return": -6.9
     },
     {
       "total_return": -0.12316001862182091,
@@ -661,10 +853,12 @@
       "denoise": "none",
       "model_path": "models/ppo_feature_USDCAD_1h_v2.zip",
       "model_size_kb": 1024.2,
-      "computed_at": "2026-05-13T16:17:27",
+      "computed_at": "2026-05-14T02:38:26",
       "n_test_rows": 12425,
       "n_trades": 718,
-      "final_balance": 8768.39981378179
+      "final_balance": 8768.39981378179,
+      "wf_sharpe": -0.2,
+      "wf_return": -4.6
     },
     {
       "total_return": 0.02067340424137787,
@@ -679,10 +873,32 @@
       "denoise": "none",
       "model_path": "models/ppo_feature_USDCAD_v2.zip",
       "model_size_kb": 1027.0,
-      "computed_at": "2026-05-13T16:17:28",
+      "computed_at": "2026-05-14T02:38:26",
       "n_test_rows": 485,
       "n_trades": 36,
-      "final_balance": 10206.734042413778
+      "final_balance": 10206.734042413778,
+      "wf_sharpe": -0.07,
+      "wf_return": -0.1
+    },
+    {
+      "total_return": 0.19031849401549894,
+      "sharpe_ratio": 2.4345018125843243,
+      "max_drawdown": -0.02904824353777411,
+      "win_rate": 0.5647058823529412,
+      "profit_factor": 2.1510294040670077,
+      "agent": "PPO",
+      "pair": "USDCAD",
+      "timeframe": "1d",
+      "version": "v1",
+      "denoise": "wavelet",
+      "model_path": "models/ppo_feature_USDCAD_wavelet.zip",
+      "model_size_kb": 1027.0,
+      "computed_at": "2026-05-14T02:38:27",
+      "n_test_rows": 485,
+      "n_trades": 85,
+      "final_balance": 11903.18494015499,
+      "wf_sharpe": 0.51,
+      "wf_return": 2.6
     },
     {
       "total_return": -0.072992233734259,
@@ -697,10 +913,12 @@
       "denoise": "none",
       "model_path": "models/ppo_feature_USDJPY.zip",
       "model_size_kb": 1026.3,
-      "computed_at": "2026-05-13T16:17:28",
+      "computed_at": "2026-05-14T02:38:27",
       "n_test_rows": 485,
       "n_trades": 23,
-      "final_balance": 9270.07766265741
+      "final_balance": 9270.07766265741,
+      "wf_sharpe": null,
+      "wf_return": null
     },
     {
       "total_return": -0.014460013138270722,
@@ -715,10 +933,12 @@
       "denoise": "none",
       "model_path": "models/ppo_feature_USDJPY_1h.zip",
       "model_size_kb": 1024.2,
-      "computed_at": "2026-05-13T16:17:31",
+      "computed_at": "2026-05-14T02:38:30",
       "n_test_rows": 12427,
       "n_trades": 328,
-      "final_balance": 9855.399868617293
+      "final_balance": 9855.399868617293,
+      "wf_sharpe": -0.3,
+      "wf_return": -7.2
     },
     {
       "total_return": -0.03543977279300892,
@@ -733,10 +953,12 @@
       "denoise": "none",
       "model_path": "models/ppo_feature_USDJPY_1h_v2.zip",
       "model_size_kb": 1024.2,
-      "computed_at": "2026-05-13T16:17:34",
+      "computed_at": "2026-05-14T02:38:33",
       "n_test_rows": 12427,
       "n_trades": 740,
-      "final_balance": 9645.602272069911
+      "final_balance": 9645.602272069911,
+      "wf_sharpe": -0.22,
+      "wf_return": -5.8
     },
     {
       "total_return": -0.021806539535608516,
@@ -751,13 +973,35 @@
       "denoise": "none",
       "model_path": "models/ppo_feature_USDJPY_v2.zip",
       "model_size_kb": 1027.0,
-      "computed_at": "2026-05-13T16:17:34",
+      "computed_at": "2026-05-14T02:38:33",
       "n_test_rows": 485,
       "n_trades": 28,
-      "final_balance": 9781.934604643915
+      "final_balance": 9781.934604643915,
+      "wf_sharpe": -0.61,
+      "wf_return": -3.0
+    },
+    {
+      "total_return": 0.5670076532231261,
+      "sharpe_ratio": 3.7347538682849097,
+      "max_drawdown": -0.030928734508023407,
+      "win_rate": 0.63,
+      "profit_factor": 3.3787533358906874,
+      "agent": "PPO",
+      "pair": "USDJPY",
+      "timeframe": "1d",
+      "version": "v1",
+      "denoise": "wavelet",
+      "model_path": "models/ppo_feature_USDJPY_wavelet.zip",
+      "model_size_kb": 1027.0,
+      "computed_at": "2026-05-14T02:38:33",
+      "n_test_rows": 485,
+      "n_trades": 100,
+      "final_balance": 15670.07653223126,
+      "wf_sharpe": -1.1,
+      "wf_return": -3.7
     }
   ],
-  "updated_at": "2026-05-13T16:16:36",
+  "updated_at": "2026-05-14T02:37:30",
   "best_by_pair": {
     "AUDUSD_1d_v1_none": {
       "total_return": 0.09251477281713139,
@@ -772,10 +1016,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_AUDUSD.zip",
       "model_size_kb": 693.4,
-      "computed_at": "2026-05-13T16:16:37",
+      "computed_at": "2026-05-14T02:37:31",
       "n_test_rows": 485,
       "n_trades": 46,
-      "final_balance": 10925.147728171314
+      "final_balance": 10925.147728171314,
+      "wf_sharpe": -0.23,
+      "wf_return": -0.9
     },
     "AUDUSD_1h_v1_none": {
       "total_return": 0.21324023588159746,
@@ -790,10 +1036,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_AUDUSD_1h.zip",
       "model_size_kb": 690.6,
-      "computed_at": "2026-05-13T16:16:40",
+      "computed_at": "2026-05-14T02:37:33",
       "n_test_rows": 12425,
       "n_trades": 664,
-      "final_balance": 12132.402358815974
+      "final_balance": 12132.402358815974,
+      "wf_sharpe": 0.02,
+      "wf_return": 1.0
     },
     "AUDUSD_1h_v2_none": {
       "total_return": 0.0,
@@ -808,10 +1056,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_AUDUSD_1h_v2.zip",
       "model_size_kb": 690.6,
-      "computed_at": "2026-05-13T16:16:42",
+      "computed_at": "2026-05-14T02:37:36",
       "n_test_rows": 12425,
       "n_trades": 0,
-      "final_balance": 10000.0
+      "final_balance": 10000.0,
+      "wf_sharpe": -0.28,
+      "wf_return": -10.0
     },
     "AUDUSD_1d_v2_none": {
       "total_return": 0.03872918688024507,
@@ -826,10 +1076,12 @@
       "denoise": "none",
       "model_path": "models/ppo_feature_AUDUSD_v2.zip",
       "model_size_kb": 1027.0,
-      "computed_at": "2026-05-13T16:17:09",
+      "computed_at": "2026-05-14T02:38:06",
       "n_test_rows": 485,
       "n_trades": 34,
-      "final_balance": 10387.291868802451
+      "final_balance": 10387.291868802451,
+      "wf_sharpe": -0.63,
+      "wf_return": -2.8
     },
     "AUDUSD_1d_v1_wavelet": {
       "total_return": 0.4888051718574391,
@@ -844,10 +1096,12 @@
       "denoise": "wavelet",
       "model_path": "models/ppo_feature_AUDUSD_wavelet.zip",
       "model_size_kb": 1027.0,
-      "computed_at": "2026-05-13T16:17:10",
+      "computed_at": "2026-05-14T02:38:07",
       "n_test_rows": 485,
       "n_trades": 119,
-      "final_balance": 14888.05171857439
+      "final_balance": 14888.05171857439,
+      "wf_sharpe": -0.24,
+      "wf_return": -1.2
     },
     "EURUSD_1d_v1_none": {
       "total_return": 0.14018103136069615,
@@ -862,10 +1116,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_EURUSD.zip",
       "model_size_kb": 693.4,
-      "computed_at": "2026-05-13T16:16:43",
+      "computed_at": "2026-05-14T02:37:37",
       "n_test_rows": 485,
       "n_trades": 69,
-      "final_balance": 11401.810313606962
+      "final_balance": 11401.810313606962,
+      "wf_sharpe": 0.19,
+      "wf_return": 0.7
     },
     "EURUSD_1h_v1_none": {
       "total_return": 0.10555514793805831,
@@ -880,10 +1136,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_EURUSD_1h.zip",
       "model_size_kb": 690.6,
-      "computed_at": "2026-05-13T16:16:46",
+      "computed_at": "2026-05-14T02:37:40",
       "n_test_rows": 12427,
       "n_trades": 576,
-      "final_balance": 11055.551479380583
+      "final_balance": 11055.551479380583,
+      "wf_sharpe": -0.15,
+      "wf_return": -3.3
     },
     "EURUSD_1h_v2_none": {
       "total_return": 0.03780339966604962,
@@ -898,10 +1156,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_EURUSD_1h_v2.zip",
       "model_size_kb": 690.6,
-      "computed_at": "2026-05-13T16:16:48",
+      "computed_at": "2026-05-14T02:37:42",
       "n_test_rows": 12427,
       "n_trades": 674,
-      "final_balance": 10378.033996660495
+      "final_balance": 10378.033996660495,
+      "wf_sharpe": -0.36,
+      "wf_return": -8.2
     },
     "EURUSD_1d_v2_none": {
       "total_return": -0.11281552064083622,
@@ -916,10 +1176,32 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_EURUSD_v2.zip",
       "model_size_kb": 693.4,
-      "computed_at": "2026-05-13T16:16:48",
+      "computed_at": "2026-05-14T02:37:42",
       "n_test_rows": 485,
       "n_trades": 82,
-      "final_balance": 8871.844793591637
+      "final_balance": 8871.844793591637,
+      "wf_sharpe": 0.41,
+      "wf_return": 1.7
+    },
+    "EURUSD_1d_v1_wavelet": {
+      "total_return": 0.33065246099529855,
+      "sharpe_ratio": 3.204703980328219,
+      "max_drawdown": -0.03453174069857638,
+      "win_rate": 0.6220472440944882,
+      "profit_factor": 2.594874712829469,
+      "agent": "DQN",
+      "pair": "EURUSD",
+      "timeframe": "1d",
+      "version": "v1",
+      "denoise": "wavelet",
+      "model_path": "models/dqn_feature_EURUSD_wavelet.zip",
+      "model_size_kb": 693.4,
+      "computed_at": "2026-05-14T02:37:43",
+      "n_test_rows": 485,
+      "n_trades": 127,
+      "final_balance": 13306.524609952985,
+      "wf_sharpe": 0.83,
+      "wf_return": 3.1
     },
     "GBPUSD_1d_v1_none": {
       "total_return": 0.13925712995023565,
@@ -934,10 +1216,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_GBPUSD.zip",
       "model_size_kb": 693.4,
-      "computed_at": "2026-05-13T16:16:48",
+      "computed_at": "2026-05-14T02:37:43",
       "n_test_rows": 485,
       "n_trades": 53,
-      "final_balance": 11392.571299502357
+      "final_balance": 11392.571299502357,
+      "wf_sharpe": -1.21,
+      "wf_return": -5.8
     },
     "GBPUSD_1h_v1_none": {
       "total_return": 0.07760986226651978,
@@ -952,10 +1236,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_GBPUSD_1h.zip",
       "model_size_kb": 690.6,
-      "computed_at": "2026-05-13T16:16:51",
+      "computed_at": "2026-05-14T02:37:45",
       "n_test_rows": 12426,
       "n_trades": 180,
-      "final_balance": 10776.098622665198
+      "final_balance": 10776.098622665198,
+      "wf_sharpe": -0.15,
+      "wf_return": -5.2
     },
     "GBPUSD_1h_v2_none": {
       "total_return": -0.035643684232826156,
@@ -970,10 +1256,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_GBPUSD_1h_v2.zip",
       "model_size_kb": 690.6,
-      "computed_at": "2026-05-13T16:16:53",
+      "computed_at": "2026-05-14T02:37:48",
       "n_test_rows": 12426,
       "n_trades": 557,
-      "final_balance": 9643.563157671739
+      "final_balance": 9643.563157671739,
+      "wf_sharpe": -0.26,
+      "wf_return": -7.4
     },
     "GBPUSD_1d_v2_none": {
       "total_return": 0.09721559647194788,
@@ -988,10 +1276,32 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_GBPUSD_v2.zip",
       "model_size_kb": 693.4,
-      "computed_at": "2026-05-13T16:16:53",
+      "computed_at": "2026-05-14T02:37:48",
       "n_test_rows": 485,
       "n_trades": 72,
-      "final_balance": 10972.155964719479
+      "final_balance": 10972.155964719479,
+      "wf_sharpe": -1.21,
+      "wf_return": -6.1
+    },
+    "GBPUSD_1d_v1_wavelet": {
+      "total_return": 0.3533628828445641,
+      "sharpe_ratio": 3.8475688849077976,
+      "max_drawdown": -0.03393496841265457,
+      "win_rate": 0.6129032258064516,
+      "profit_factor": 3.4156306000440977,
+      "agent": "DQN",
+      "pair": "GBPUSD",
+      "timeframe": "1d",
+      "version": "v1",
+      "denoise": "wavelet",
+      "model_path": "models/dqn_feature_GBPUSD_wavelet.zip",
+      "model_size_kb": 693.4,
+      "computed_at": "2026-05-14T02:37:49",
+      "n_test_rows": 485,
+      "n_trades": 93,
+      "final_balance": 13533.62882844564,
+      "wf_sharpe": 0.08,
+      "wf_return": 0.5
     },
     "USDCAD_1d_v1_none": {
       "total_return": 0.13981857145932497,
@@ -1006,10 +1316,12 @@
       "denoise": "none",
       "model_path": "models/ppo_feature_USDCAD.zip",
       "model_size_kb": 1026.3,
-      "computed_at": "2026-05-13T16:17:22",
+      "computed_at": "2026-05-14T02:38:20",
       "n_test_rows": 485,
       "n_trades": 56,
-      "final_balance": 11398.18571459325
+      "final_balance": 11398.18571459325,
+      "wf_sharpe": null,
+      "wf_return": null
     },
     "USDCAD_1h_v1_none": {
       "total_return": 0.06470221938639975,
@@ -1024,10 +1336,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_USDCAD_1h.zip",
       "model_size_kb": 690.6,
-      "computed_at": "2026-05-13T16:16:56",
+      "computed_at": "2026-05-14T02:37:51",
       "n_test_rows": 12425,
       "n_trades": 125,
-      "final_balance": 10647.022193863997
+      "final_balance": 10647.022193863997,
+      "wf_sharpe": -0.1,
+      "wf_return": -2.7
     },
     "USDCAD_1h_v2_none": {
       "total_return": 0.0,
@@ -1042,10 +1356,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_USDCAD_1h_v2.zip",
       "model_size_kb": 690.6,
-      "computed_at": "2026-05-13T16:16:58",
+      "computed_at": "2026-05-14T02:37:54",
       "n_test_rows": 12425,
       "n_trades": 0,
-      "final_balance": 10000.0
+      "final_balance": 10000.0,
+      "wf_sharpe": -0.19,
+      "wf_return": -4.3
     },
     "USDCAD_1d_v2_none": {
       "total_return": 0.02067340424137787,
@@ -1060,10 +1376,32 @@
       "denoise": "none",
       "model_path": "models/ppo_feature_USDCAD_v2.zip",
       "model_size_kb": 1027.0,
-      "computed_at": "2026-05-13T16:17:28",
+      "computed_at": "2026-05-14T02:38:26",
       "n_test_rows": 485,
       "n_trades": 36,
-      "final_balance": 10206.734042413778
+      "final_balance": 10206.734042413778,
+      "wf_sharpe": -0.07,
+      "wf_return": -0.1
+    },
+    "USDCAD_1d_v1_wavelet": {
+      "total_return": 0.19155306940580785,
+      "sharpe_ratio": 2.4598032814470963,
+      "max_drawdown": -0.03707033211088392,
+      "win_rate": 0.574468085106383,
+      "profit_factor": 2.2643245993972467,
+      "agent": "DQN",
+      "pair": "USDCAD",
+      "timeframe": "1d",
+      "version": "v1",
+      "denoise": "wavelet",
+      "model_path": "models/dqn_feature_USDCAD_wavelet.zip",
+      "model_size_kb": 693.4,
+      "computed_at": "2026-05-14T02:37:54",
+      "n_test_rows": 485,
+      "n_trades": 94,
+      "final_balance": 11915.53069405808,
+      "wf_sharpe": 0.81,
+      "wf_return": 2.1
     },
     "USDJPY_1d_v1_none": {
       "total_return": 0.231753206702642,
@@ -1078,10 +1416,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_USDJPY.zip",
       "model_size_kb": 692.9,
-      "computed_at": "2026-05-13T16:16:58",
+      "computed_at": "2026-05-14T02:37:54",
       "n_test_rows": 485,
       "n_trades": 95,
-      "final_balance": 12317.532067026421
+      "final_balance": 12317.532067026421,
+      "wf_sharpe": null,
+      "wf_return": null
     },
     "USDJPY_1h_v1_none": {
       "total_return": -0.009258067382716395,
@@ -1096,10 +1436,12 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_USDJPY_1h.zip",
       "model_size_kb": 690.6,
-      "computed_at": "2026-05-13T16:17:01",
+      "computed_at": "2026-05-14T02:37:57",
       "n_test_rows": 12427,
       "n_trades": 330,
-      "final_balance": 9907.419326172836
+      "final_balance": 9907.419326172836,
+      "wf_sharpe": -0.11,
+      "wf_return": -3.0
     },
     "USDJPY_1h_v2_none": {
       "total_return": -0.03543977279300892,
@@ -1114,10 +1456,12 @@
       "denoise": "none",
       "model_path": "models/ppo_feature_USDJPY_1h_v2.zip",
       "model_size_kb": 1024.2,
-      "computed_at": "2026-05-13T16:17:34",
+      "computed_at": "2026-05-14T02:38:33",
       "n_test_rows": 12427,
       "n_trades": 740,
-      "final_balance": 9645.602272069911
+      "final_balance": 9645.602272069911,
+      "wf_sharpe": -0.22,
+      "wf_return": -5.8
     },
     "USDJPY_1d_v2_none": {
       "total_return": 0.1739013947966137,
@@ -1132,10 +1476,32 @@
       "denoise": "none",
       "model_path": "models/dqn_feature_USDJPY_v2.zip",
       "model_size_kb": 693.4,
-      "computed_at": "2026-05-13T16:17:03",
+      "computed_at": "2026-05-14T02:37:59",
       "n_test_rows": 485,
       "n_trades": 64,
-      "final_balance": 11739.013947966137
+      "final_balance": 11739.013947966137,
+      "wf_sharpe": -0.25,
+      "wf_return": -1.2
+    },
+    "USDJPY_1d_v1_wavelet": {
+      "total_return": 0.5670076532231261,
+      "sharpe_ratio": 3.7347538682849097,
+      "max_drawdown": -0.030928734508023407,
+      "win_rate": 0.63,
+      "profit_factor": 3.3787533358906874,
+      "agent": "PPO",
+      "pair": "USDJPY",
+      "timeframe": "1d",
+      "version": "v1",
+      "denoise": "wavelet",
+      "model_path": "models/ppo_feature_USDJPY_wavelet.zip",
+      "model_size_kb": 1027.0,
+      "computed_at": "2026-05-14T02:38:33",
+      "n_test_rows": 485,
+      "n_trades": 100,
+      "final_balance": 15670.07653223126,
+      "wf_sharpe": -1.1,
+      "wf_return": -3.7
     }
   }
 }
