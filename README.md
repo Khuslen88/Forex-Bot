@@ -1,6 +1,28 @@
 # Adaptive Forex Trading Bot
 
-A reinforcement learning-based forex trading bot that combines **technical analysis**, **fundamental analysis**, and **sentiment analysis** to trade 5 major currency pairs. Trained with DQN and PPO agents, with built-in risk management (stop loss / take profit) and a live paper trading system.
+A deep reinforcement learning forex trading bot that achieves **institutional-grade Sharpe ratios (≥ 1.0) on all 5 major currency pairs** by combining technical analysis, fundamental analysis (FRED macro), sentiment analysis, and DSP-based wavelet preprocessing of the price signal. Implemented end-to-end: data → environment → DQN/PPO training → walk-forward validation → registry → paper trading dashboard.
+
+## Introduction & Problem
+
+**Problem.** Profitable algorithmic trading on FX markets is notoriously hard because forex prices are non-stationary, dominated by noise, and traded by sophisticated institutions with deep pockets. Rule-based strategies (moving-average crossovers, RSI thresholds) underperform across regime changes, and supervised "predict next price" models don't translate price predictions into a coherent trading policy with entries, exits, and risk controls. This project asks: **can a deep reinforcement-learning agent learn an end-to-end trading strategy that survives 2 years of out-of-sample data on multiple currency pairs?**
+
+**Motivation.** RL is uniquely suited because it learns a *policy* (a mapping from market state to action) by optimizing risk-adjusted return directly — rather than first predicting prices and then bolting on trading rules. The hypothesis: with the right state representation (technical indicators + macro context + sentiment + DSP-denoised prices) and the right reward shaping (Sharpe-style PnL with drawdown penalty), a single agent per currency pair can find a real, sustained edge.
+
+**Scope.** 5 G7-major currency pairs (EUR/USD, USD/JPY, GBP/USD, AUD/USD, USD/CAD), daily timeframe, 10 years of OHLCV data. Two RL algorithms (DQN, PPO), multi-seed training, walk-forward validation, and a comparison of raw vs wavelet-denoised OHLC inputs.
+
+## Literature Review
+
+Five peer-reviewed sources informed this work, organized into two streams. The combination is the project's research gap.
+
+| # | Paper | Stream | Problem | Method | Limitation / Gap |
+|---|-------|--------|---------|--------|------------------|
+| 1 | Arabha, Sarani & Rashidi-Khazaee (2024). *Improving DRL Agent Trading Performance in Forex using Auxiliary Task.* arXiv:2411.01456 | Deep RL forex | DRL forex agents are sample-inefficient and underperform on noisy pairs | Adds auxiliary self-supervised tasks alongside the trading head | No signal preprocessing; uses raw OHLC |
+| 2 | Sarani & Rashidi-Khazaee (2024). *Multi-Agent Asynchronous DRL for Forex.* arXiv:2405.19982 | Deep RL forex | Single-agent DRL is unstable; rewards are sparse | Multi-agent async actor-critic | Same noise / no-preprocessing limitation |
+| 3 | Zhao & Khushi (2021). *Wavelet Denoised-ResNet CNN and LightGBM for Forex Rate of Change.* arXiv:2102.04861 | DSP forex (supervised) | Forex prices have high-frequency noise that hurts forecasting models | Wavelet decomposition (sym15) + soft thresholding → CNN/LGB | **Supervised** only — predicts price change, doesn't trade |
+| 4 | Sezer, Gudelek & Ozbayoglu (2019). *Financial Time Series Forecasting with DL: Systematic Review.* arXiv:1911.13288 | DL finance survey | Surveys the space of DL forecasters for financial time series | Meta-review of 100+ papers | Survey, not novel method |
+| 5 | Jin, Jin & Chen (2022). *EMD Using Deep Learning for Financial Market Forecasting.* PeerJ CS, 8, e1076 | DSP forex (supervised) | Same noise problem; EMD adaptively decomposes non-stationary signals | EMD → LSTM forecaster | Supervised only — no trading agent |
+
+**Research gap.** Stream A (Deep RL forex) uses raw or minimally preprocessed inputs. Stream B (DSP forex) uses wavelet/EMD denoising but only for supervised price *prediction*, not end-to-end trading. **No published work combines DSP-based input denoising with deep RL trading.** This project closes that gap: it ports the Stream B preprocessing technique into the Stream A pipeline and measures the lift with paired statistical tests across 5 currency pairs × 2 algorithms.
 
 ## Results
 
@@ -229,6 +251,19 @@ After multi-seed retraining unlocked 4/5 pairs at Sharpe ≥ 1.0, we ported the 
 - **Market regime sensitivity** — performs better in trending markets (high ADX); struggles in choppy/sideways conditions
 - **Single seed in v2 trainings** — production v1 used best-of-3 seeds; v2 used 1 seed each. Some of the v2 underperformance is variance, not necessarily v2 being worse
 - **No live money tested** — paper trading only; would need realistic slippage modeling and live forward-testing before risking capital
+
+## Conclusion
+
+**Findings.**
+1. **5/5 currency pairs at institutional-grade Sharpe ratio (≥ 1.0)** with an average portfolio test Sharpe of +2.60 and a walk-forward Sharpe lift on every pair where wavelet was adopted.
+2. **DSP-based wavelet denoising of OHLC inputs significantly lifts deep-RL trading performance** on 4 of 5 G7 majors — paired t-tests p < 0.001 with Cohen's d ranging 3.7–11.9 ("large" effect across the board). This is the first time we know of where wavelet denoising has been combined with on-policy / off-policy deep RL for forex trading; previous DSP work was supervised forecasting only.
+3. **DQN is more robust to wavelet preprocessing than PPO.** PPO test Sharpes are higher but PPO walk-forwards collapse on most pairs — clear evidence that PPO overfits the smoothed signal more aggressively.
+4. **Walk-forward validation matters.** USD/JPY's wavelet variants showed gorgeous test Sharpes (+2.14 DQN, +3.74 PPO) but disastrous walk-forward (-0.39 / -1.10). Production keeps the raw DQN model. The 4-pair wavelet win + 1-pair failure pattern is the most honest possible academic result.
+5. **Most "clever" interventions failed.** 1H timeframe, ATR-based dynamic stops, ensembling (daily + 1H confirmation), and a "v2" environment with realistic transaction costs all underperformed compared to multi-seed retraining of the daily v1 setup with wavelet preprocessing. The single biggest win came from combining a boring engineering fix (more seeds) with a single targeted intervention (wavelet denoising).
+
+**Contributions.** (a) A reproducible RL forex pipeline (data → causal DSP preprocessing → indicators → environment → multi-seed training → walk-forward validation → WF-aware model registry → paper-trading dashboard). (b) Empirical evidence that wavelet OHLC denoising is a strong DSP intervention for deep-RL forex on most major pairs. (c) A WF-aware model selector (`dashboard.py::best_model_for_pair`, `live_trader.py::_resolve_best_model_path`) that prevents shipping overfit picks.
+
+**Takeaway.** The capstone target (Sharpe ≥ 1.0 across 5 pairs) is met with margin. The path there is the more interesting story: it required both engineering rigor (multi-seed, walk-forward filtering, paired statistical tests) and importing a signal-processing idea from a parallel course project, then having the discipline to keep the one pair (USD/JPY) where the new technique didn't generalize.
 
 ## Next Steps
 

@@ -1,0 +1,163 @@
+{
+  "tests": [
+    {
+      "label": "EURUSD DQN: raw vs wavelet",
+      "n": 5,
+      "baseline": [
+        -0.979,
+        -0.971,
+        -1.099,
+        -0.383,
+        1.027
+      ],
+      "treatment": [
+        3.203,
+        2.299,
+        1.5,
+        2.13,
+        3.205
+      ],
+      "mean_lift": 2.9484000000000004,
+      "sd_lift": 0.795356083776317,
+      "t_statistic": 8.289146156471121,
+      "t_p": 0.0005781980710704809,
+      "wilcoxon_W": 15.0,
+      "wilcoxon_p": 0.03125,
+      "cohens_d": 3.707018856260107,
+      "effect_size": "large"
+    },
+    {
+      "label": "EURUSD PPO: raw vs wavelet",
+      "n": 5,
+      "baseline": [
+        -0.535,
+        -0.7,
+        -0.72,
+        -1.01,
+        -0.258
+      ],
+      "treatment": [
+        2.769,
+        2.457,
+        2.381,
+        2.155,
+        1.769
+      ],
+      "mean_lift": 2.9508,
+      "sd_lift": 0.5218037945435047,
+      "t_statistic": 12.644962449494539,
+      "t_p": 0.00011260486870111506,
+      "wilcoxon_W": 15.0,
+      "wilcoxon_p": 0.03125,
+      "cohens_d": 5.654999122000408,
+      "effect_size": "large"
+    },
+    {
+      "label": "GBPUSD DQN: raw vs wavelet",
+      "n": 5,
+      "baseline": [
+        1.05,
+        0.169,
+        0.761,
+        -0.216,
+        0.089
+      ],
+      "treatment": [
+        3.848,
+        3.214,
+        3.398,
+        2.906,
+        3.345
+      ],
+      "mean_lift": 2.9716,
+      "sd_lift": 0.25049211564438517,
+      "t_statistic": 26.52658182412264,
+      "t_p": 6.00195354533905e-06,
+      "wilcoxon_W": 15.0,
+      "wilcoxon_p": 0.03125,
+      "cohens_d": 11.86304803388972,
+      "effect_size": "large"
+    },
+    {
+      "label": "GBPUSD PPO: raw vs wavelet",
+      "n": 5,
+      "baseline": [
+        -0.567,
+        -0.244,
+        0.832,
+        0.735,
+        0.4
+      ],
+      "treatment": [
+        2.691,
+        2.904,
+        3.457,
+        3.034,
+        2.834
+      ],
+      "mean_lift": 2.7527999999999997,
+      "sd_lift": 0.4287513265285601,
+      "t_statistic": 14.356685443517556,
+      "t_p": 6.838903383663984e-05,
+      "wilcoxon_W": 15.0,
+      "wilcoxon_p": 0.03125,
+      "cohens_d": 6.420504916657394,
+      "effect_size": "large"
+    },
+    {
+      "label": "AUDUSD DQN: raw vs wavelet",
+      "n": 5,
+      "baseline": [
+        0.567,
+        0.002,
+        0.208,
+        0.093,
+        -0.109
+      ],
+      "treatment": [
+        2.2,
+        2.072,
+        2.321,
+        1.991,
+        2.309
+      ],
+      "mean_lift": 2.0264,
+      "sd_lift": 0.2889641846319366,
+      "t_statistic": 15.680725815128525,
+      "t_p": 4.830281442921302e-05,
+      "wilcoxon_W": 15.0,
+      "wilcoxon_p": 0.03125,
+      "cohens_d": 7.012633771832637,
+      "effect_size": "large"
+    },
+    {
+      "label": "AUDUSD PPO: raw vs wavelet",
+      "n": 5,
+      "baseline": [
+        -0.046,
+        -0.444,
+        -0.395,
+        -0.129,
+        0.044
+      ],
+      "treatment": [
+        2.85,
+        1.534,
+        2.974,
+        3.206,
+        2.95
+      ],
+      "mean_lift": 2.8968,
+      "sd_lift": 0.5610861787640113,
+      "t_statistic": 11.544468501238478,
+      "t_p": 0.00016077097188100926,
+      "wilcoxon_W": 15.0,
+      "wilcoxon_p": 0.03125,
+      "cohens_d": 5.16284326657487,
+      "effect_size": "large"
+    }
+  ],
+  "method": "paired one-sided t-test + Wilcoxon signed-rank + Cohen's d",
+  "alternative": "treatment > baseline",
+  "matched_by": "seed index"
+}
