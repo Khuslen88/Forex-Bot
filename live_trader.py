@@ -139,26 +139,29 @@ def _load_registry():
 
 
 def _resolve_best_model_path(pair: str):
-    """Look up the highest-Sharpe DAILY v1 model for `pair` in the registry.
+    """Look up the highest-Sharpe production model for `pair` in the registry.
 
-    Production set only — 1H and v2 env experiments underperformed daily v1.
-    Returns (path, agent_upper) or (None, None) if no registry / no models.
+    Production set: daily timeframe, v1 env, denoise=none|wavelet.
+    Returns (path, agent_upper, denoise_method) or (None, None, None).
     """
     reg = _load_registry()
     if reg is None:
-        return None, None
+        return None, None, None
     candidates = [m for m in reg.get("models", [])
                   if m["pair"] == pair
                   and m.get("timeframe") == "1d"
-                  and m.get("version", "v1") == "v1"]
+                  and m.get("version", "v1") == "v1"
+                  and m.get("denoise", "none") in ("none", "wavelet")]
     if not candidates:
-        return None, None
+        return None, None, None
     best = max(candidates, key=lambda m: m["sharpe_ratio"])
-    fname = f"{best['agent'].lower()}_feature_{pair}.zip"
+    den = best.get("denoise", "none")
+    den_suffix = "" if den == "none" else f"_{den}"
+    fname = f"{best['agent'].lower()}_feature_{pair}{den_suffix}.zip"
     path = os.path.join(MODELS_PATH, fname)
     if not os.path.exists(path):
-        return None, None
-    return path, best["agent"].upper()
+        return None, None, None
+    return path, best["agent"].upper(), den
 
 
 def load_model(pair: str, model_path: str = None,
@@ -171,13 +174,16 @@ def load_model(pair: str, model_path: str = None,
       3. Otherwise default to models/dqn_feature_{PAIR}.zip
     """
     agent_upper = "DQN"
+    self_denoise = "none"
 
     if model_path is None and use_best:
-        resolved, agent_upper_resolved = _resolve_best_model_path(pair)
+        resolved, agent_upper_resolved, den = _resolve_best_model_path(pair)
         if resolved is not None:
             model_path = resolved
             agent_upper = agent_upper_resolved
-            print(f"  Best model from registry: {os.path.basename(model_path)}")
+            self_denoise = den or "none"
+            den_str = f"  (denoise={self_denoise})" if self_denoise != "none" else ""
+            print(f"  Best model from registry: {os.path.basename(model_path)}{den_str}")
 
     if model_path is None:
         model_path = os.path.join(MODELS_PATH, f"dqn_feature_{pair}.zip")
@@ -201,6 +207,9 @@ def load_model(pair: str, model_path: str = None,
     loader = PPO if agent_upper == "PPO" else DQN
     model = loader.load(model_path)
     print(f"  Model loaded ({agent_upper}): {model_path}")
+    # Attach the denoise tag (set above when use_best) so callers can
+    # preprocess data the same way the model was trained.
+    model._denoise = self_denoise
     return model
 
 
@@ -214,13 +223,22 @@ def get_available_pairs() -> list:
     return available
 
 
-def fetch_and_prepare(client, symbol: str) -> pd.DataFrame:
-    """Fetch live candles, compute indicators, and merge FRED economic data."""
+def fetch_and_prepare(client, symbol: str, denoise: str = "none") -> pd.DataFrame:
+    """Fetch live candles, compute indicators, and merge FRED economic data.
+
+    If `denoise` is set, applies causal wavelet/EMD before indicators —
+    must match how the loaded model was trained.
+    """
     # Need 250+ candles: 200 for SMA_200 + buffer for indicator warm-up
     df = client.fetch_candles(symbol, count=300, granularity="D")
     print(f"  Fetched {len(df)} daily candles  "
           f"({df['Date'].iloc[0].strftime('%Y-%m-%d')} → "
           f"{df['Date'].iloc[-1].strftime('%Y-%m-%d')})")
+
+    if denoise and denoise != "none":
+        from src.features.denoising import denoise_ohlc_causal
+        df = denoise_ohlc_causal(df, method=denoise, window=256, refresh_every=1)
+        print(f"  Denoised OHLC with {denoise} (causal, window=256)")
 
     df = add_indicators(df)
     # Merge FRED economic features
@@ -355,8 +373,9 @@ def run_pair(pair: str, client, args):
     if model is None:
         return
 
-    # Fetch data and compute indicators
-    df = fetch_and_prepare(client, symbol)
+    # Fetch data and compute indicators (apply same denoising as training)
+    model_denoise = getattr(model, "_denoise", "none")
+    df = fetch_and_prepare(client, symbol, denoise=model_denoise)
 
     # Get model decision
     action = get_model_action(model, df)

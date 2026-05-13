@@ -34,13 +34,14 @@ ECON_PATH     = os.path.join(ROOT, "data", "economic", "fred_data.csv")
 
 
 def parse_model_filename(filename: str):
-    """Extract (agent, pair, timeframe, version) from a model filename.
+    """Extract (agent, pair, timeframe, version, denoise) from a model filename.
 
     Examples:
-        dqn_feature_EURUSD.zip          -> ("dqn", "EURUSD", "1d", "v1")
-        ppo_feature_USDCAD_1h.zip       -> ("ppo", "USDCAD", "1h", "v1")
-        dqn_feature_EURUSD_v2.zip       -> ("dqn", "EURUSD", "1d", "v2")
-        ppo_feature_USDCAD_1h_v2.zip    -> ("ppo", "USDCAD", "1h", "v2")
+        dqn_feature_EURUSD.zip              -> ("dqn", "EURUSD", "1d", "v1", "none")
+        ppo_feature_USDCAD_1h.zip           -> ("ppo", "USDCAD", "1h", "v1", "none")
+        dqn_feature_EURUSD_v2.zip           -> ("dqn", "EURUSD", "1d", "v2", "none")
+        dqn_feature_AUDUSD_wavelet.zip      -> ("dqn", "AUDUSD", "1d", "v1", "wavelet")
+        ppo_feature_USDCAD_1h_v2.zip        -> ("ppo", "USDCAD", "1h", "v2", "none")
     """
     name = os.path.basename(filename).replace(".zip", "")
     parts = name.split("_")
@@ -55,18 +56,25 @@ def parse_model_filename(filename: str):
 
     timeframe = "1d"
     version   = "v1"
+    denoise   = "none"
     for tok in parts[3:]:
         if tok in TIMEFRAME_CONFIGS:
             timeframe = tok
         elif tok in ("v1", "v2"):
             version = tok
-    return agent, pair, timeframe, version
+        elif tok in ("wavelet", "emd"):
+            denoise = tok
+    return agent, pair, timeframe, version, denoise
 
 
-def load_test_df(pair: str, timeframe: str) -> pd.DataFrame:
+def load_test_df(pair: str, timeframe: str, denoise: str = "none") -> pd.DataFrame:
     cfg = TIMEFRAME_CONFIGS[timeframe]
     raw = pd.read_csv(os.path.join(DATA_DIR, cfg["data_file"]))
-    df = load_pair(raw, pair, econ_path=ECON_PATH if os.path.exists(ECON_PATH) else None)
+    df = load_pair(
+        raw, pair,
+        econ_path=ECON_PATH if os.path.exists(ECON_PATH) else None,
+        denoise=denoise if denoise != "none" else None,
+    )
     split_idx = int(len(df) * TRAIN_TEST_SPLIT)
     return df.iloc[split_idx:].copy().reset_index(drop=True)
 
@@ -93,9 +101,9 @@ def evaluate_model(model_path: str):
     parsed = parse_model_filename(model_path)
     if parsed is None:
         return None
-    agent, pair, timeframe, version = parsed
+    agent, pair, timeframe, version, denoise = parsed
 
-    test_df = load_test_df(pair, timeframe)
+    test_df = load_test_df(pair, timeframe, denoise=denoise)
     env_factory = make_env_factory(timeframe, version=version, pair=pair)
 
     if agent == "dqn":
@@ -110,6 +118,7 @@ def evaluate_model(model_path: str):
     metrics["pair"]         = pair
     metrics["timeframe"]    = timeframe
     metrics["version"]      = version
+    metrics["denoise"]      = denoise
     metrics["model_path"]   = os.path.relpath(model_path, ROOT)
     metrics["model_size_kb"] = round(os.path.getsize(model_path) / 1024, 1)
     metrics["computed_at"]  = datetime.now().isoformat(timespec="seconds")
@@ -144,7 +153,7 @@ def main():
     # Index by best agent per pair (per timeframe + version), ranked by Sharpe
     best_by_pair = {}
     for m in registry["models"]:
-        key = f"{m['pair']}_{m['timeframe']}_{m.get('version', 'v1')}"
+        key = f"{m['pair']}_{m['timeframe']}_{m.get('version', 'v1')}_{m.get('denoise', 'none')}"
         if key not in best_by_pair or m["sharpe_ratio"] > best_by_pair[key]["sharpe_ratio"]:
             best_by_pair[key] = m
     registry["best_by_pair"] = best_by_pair

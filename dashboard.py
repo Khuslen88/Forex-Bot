@@ -91,18 +91,21 @@ def load_registry() -> dict:
         return json.load(f)
 
 
-def best_model_for_pair(pair: str, registry: dict, prefer_daily_v1: bool = True):
+def best_model_for_pair(pair: str, registry: dict, prefer_production: bool = True):
     """Return the highest-Sharpe model for the pair.
 
-    With prefer_daily_v1 (default), only consider 1d v1 models — these are
-    the production set (1H underperforms; v2 env experiments hurt results).
-    Set False to include v2 / 1H / ensemble in the search.
+    With prefer_production (default), only consider daily/v1 models — including
+    the wavelet-denoised variants that beat baseline on weak pairs. 1H and v2
+    env experiments underperformed and are excluded.
+
+    Set False to include 1H / v2 / EMD in the search.
     """
     candidates = [m for m in registry.get("models", []) if m["pair"] == pair]
-    if prefer_daily_v1:
+    if prefer_production:
         prod = [m for m in candidates
                 if m.get("timeframe") == "1d"
-                and m.get("version", "v1") == "v1"]
+                and m.get("version", "v1") == "v1"
+                and m.get("denoise", "none") in ("none", "wavelet")]
         if prod:
             candidates = prod
     if not candidates:
@@ -190,10 +193,13 @@ def stop_bot() -> str:
 # ── Data + model loading ─────────────────────────────────────────────────────
 
 @st.cache_resource
-def load_model_for_pair(pair: str, agent: str, timeframe: str):
+def load_model_for_pair(pair: str, agent: str, timeframe: str,
+                        version: str = "v1", denoise: str = "none"):
     """Load a specific model. Returns (model, expected_obs_dim) or (None, 0)."""
-    suffix = "" if timeframe == "1d" else f"_{timeframe}"
-    fname = f"{agent.lower()}_feature_{pair}{suffix}.zip"
+    tf_suffix  = "" if timeframe == "1d"  else f"_{timeframe}"
+    ver_suffix = "" if version   == "v1"  else f"_{version}"
+    den_suffix = "" if denoise   == "none" else f"_{denoise}"
+    fname = f"{agent.lower()}_feature_{pair}{tf_suffix}{ver_suffix}{den_suffix}.zip"
     path = os.path.join(MODELS_PATH, fname)
     if not os.path.exists(path):
         return None, 0
@@ -207,11 +213,18 @@ def load_model_for_pair(pair: str, agent: str, timeframe: str):
 
 
 @st.cache_data(ttl=300)
-def fetch_pair_data(pair: str):
-    """Fetch latest daily candles + indicators + econ + sentiment for a pair."""
+def fetch_pair_data(pair: str, denoise: str = "none"):
+    """Fetch latest daily candles + indicators + econ + sentiment for a pair.
+
+    If `denoise` is set, applies causal wavelet/EMD denoising to OHLC before
+    indicators — must match how the loaded model was trained.
+    """
     client = PaperClient()
     try:
         df = client.fetch_candles(pair, count=300, granularity="D")
+        if denoise and denoise != "none":
+            from src.features.denoising import denoise_ohlc_causal
+            df = denoise_ohlc_causal(df, method=denoise, window=256, refresh_every=1)
         df = add_indicators(df)
         if os.path.exists(ECON_PATH):
             df = load_econ_features(ECON_PATH, df)
@@ -398,20 +411,21 @@ with tab_overview:
 
     st.markdown('<div class="section-header">Recommended Model Per Pair</div>',
                 unsafe_allow_html=True)
-    st.caption("Auto-selected by highest Sharpe ratio across DQN/PPO and 1d/1h timeframes.")
+    st.caption("Auto-selected by highest Sharpe across DQN/PPO (daily v1, with optional wavelet denoising).")
 
     rec_rows = []
     for pair in FOREX_PAIRS:
         best = best_model_for_pair(pair, registry)
         if best is None:
-            rec_rows.append({"Pair": pair, "Best Agent": "—", "Timeframe": "—",
+            rec_rows.append({"Pair": pair, "Best Agent": "—", "Preproc": "—",
                              "Return": "—", "Sharpe": "—", "Win Rate": "—",
                              "Profit Factor": "—"})
         else:
+            den = best.get("denoise", "none")
             rec_rows.append({
                 "Pair":          pair,
                 "Best Agent":    best["agent"],
-                "Timeframe":     best["timeframe"],
+                "Preproc":       "raw" if den == "none" else den,
                 "Return":        f"{best['total_return']*100:+.2f}%",
                 "Sharpe":        f"{best['sharpe_ratio']:+.3f}",
                 "Win Rate":      f"{best['win_rate']*100:.1f}%",
@@ -429,11 +443,15 @@ with tab_overview:
             if best is None:
                 st.warning(f"**{pair}**\nNo trained model")
                 continue
-            model, dim = load_model_for_pair(pair, best["agent"], best["timeframe"])
+            model, dim = load_model_for_pair(
+                pair, best["agent"], best["timeframe"],
+                version=best.get("version", "v1"),
+                denoise=best.get("denoise", "none"),
+            )
             if model is None:
                 st.warning(f"**{pair}**\nLoad failed")
                 continue
-            df = fetch_pair_data(pair)
+            df = fetch_pair_data(pair, denoise=best.get("denoise", "none"))
             if df is None or len(df) < 21:
                 st.warning(f"**{pair}**\nNo data")
                 continue
@@ -452,7 +470,7 @@ with tab_overview:
                     <div style="font-size: 0.8rem; color: #374151; margin-top: 4px;">
                         Price: <b>{price:.5f}</b><br>
                         Day: {daily_chg:+.2f}%<br>
-                        Model: {best['agent']} · {best['timeframe']}
+                        Model: {best['agent']} · {best['timeframe']}{(' · ' + best['denoise']) if best.get('denoise', 'none') != 'none' else ''}
                     </div>
                 </div>""",
                 unsafe_allow_html=True,
@@ -474,8 +492,12 @@ with tab_overview:
         if best is None:
             st.error(f"No model for {exec_pair}")
         else:
-            model, dim = load_model_for_pair(exec_pair, best["agent"], best["timeframe"])
-            df = fetch_pair_data(exec_pair)
+            model, dim = load_model_for_pair(
+                exec_pair, best["agent"], best["timeframe"],
+                version=best.get("version", "v1"),
+                denoise=best.get("denoise", "none"),
+            )
+            df = fetch_pair_data(exec_pair, denoise=best.get("denoise", "none"))
             if model and df is not None:
                 action = get_signal(model, df, dim)
                 sig_name = ACTION_NAMES[action]
