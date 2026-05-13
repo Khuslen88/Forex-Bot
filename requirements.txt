@@ -9,6 +9,11 @@ fredapi>=0.5.0
 # Technical Indicators
 ta>=0.10.0
 
+# Signal Processing (DSP-based denoising, ported from Modern Topics in DS project)
+PyWavelets>=1.4.0       # wavelet decomposition (Zhao & Khushi 2021)
+EMD-signal>=1.4.0       # empirical mode decomposition (Jin et al. 2022)
+scipy>=1.10.0           # paired t-test + Wilcoxon for statistical_tests.py
+
 # Sentiment Analysis
 textblob>=0.17.0
 

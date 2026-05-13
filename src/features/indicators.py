@@ -133,20 +133,41 @@ def load_pair(
     pair: str,
     econ_path: str = None,
     sentiment: bool = True,
+    denoise: str = None,
+    denoise_kwargs: dict = None,
 ) -> pd.DataFrame:
     """
     Filter a single currency pair from the combined forex DataFrame and add indicators.
 
     Parameters
     ----------
-    df_all    : combined DataFrame (from forex_dataset_daily.csv) with a 'Pair' column
-    pair      : e.g. 'EURUSD', 'USDJPY'
-    econ_path : optional path to fred_data.csv; if provided, merges macro features
-    sentiment : if True, add historical sentiment proxy features
+    df_all          : combined DataFrame (from forex_dataset_daily.csv) with a 'Pair' column
+    pair            : e.g. 'EURUSD', 'USDJPY'
+    econ_path       : optional path to fred_data.csv; if provided, merges macro features
+    sentiment       : if True, add historical sentiment proxy features
+    denoise         : None | "wavelet" | "emd" — DSP-based denoising of OHLC before indicators
+    denoise_kwargs  : dict forwarded to denoise_ohlc_causal (window, refresh_every, ...)
+
+    When `denoise` is set, OHLC columns are filtered with a causal rolling-window
+    wavelet or EMD denoiser BEFORE technical indicators are computed. Method
+    ported from the Modern Topics in DS DSP-RL project (May 2026).
     """
     df = df_all[df_all["Pair"] == pair].copy()
     df["Date"] = pd.to_datetime(df["Date"])
     df = df.sort_values("Date").reset_index(drop=True)
+
+    # ── Optional DSP denoising (causal — no look-ahead bias) ─────────────
+    if denoise and denoise != "none":
+        from src.features.denoising import denoise_ohlc_causal
+        kwargs = {"window": 256, "refresh_every": 1}
+        if denoise == "emd":
+            # EMD is ~50x slower than wavelet; only refresh once per day on 1H
+            kwargs["refresh_every"] = 24
+            kwargs["n_imfs_to_remove"] = 1
+        if denoise_kwargs:
+            kwargs.update(denoise_kwargs)
+        df = denoise_ohlc_causal(df, method=denoise, **kwargs)
+
     df = add_indicators(df)
     if econ_path:
         df = load_econ_features(econ_path, df)

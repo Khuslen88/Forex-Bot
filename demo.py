@@ -75,6 +75,9 @@ def parse_args():
     p.add_argument("--version", default="v1", choices=["v1", "v2"],
                    help="Env version: v1 (fixed SL/TP, flat cost) or v2 (ATR SL/TP, "
                         "variable spread + slippage). Default: v1")
+    p.add_argument("--denoise", default="none", choices=["none", "wavelet", "emd"],
+                   help="DSP-based denoising of OHLC before indicators. "
+                        "Default: none (raw prices)")
     p.add_argument("--quick", action="store_true", help="Train for only 20k steps (fast test)")
     p.add_argument("--load",  default=None,  help="Path to a pre-trained model .zip file")
     p.add_argument("--seeds", type=int, default=1, help="Train N models with different seeds, keep best (default: 1)")
@@ -83,15 +86,19 @@ def parse_args():
 
 # ── Data loading ───────────────────────────────────────────────────────────────
 
-def load_data(pair: str, timeframe: str = "1d") -> pd.DataFrame:
+def load_data(pair: str, timeframe: str = "1d", denoise: str = "none") -> pd.DataFrame:
     data_file = TIMEFRAME_CONFIGS[timeframe]["data_file"]
     data_path = os.path.join(os.path.dirname(__file__), "data", "raw", data_file)
     econ_path = os.path.join(os.path.dirname(__file__), "data", "economic", "fred_data.csv")
-    print(f"\n[1/5] Loading data: {pair}  (timeframe={timeframe}, file={data_file})")
+    print(f"\n[1/5] Loading data: {pair}  (timeframe={timeframe}, file={data_file}, denoise={denoise})")
     raw = pd.read_csv(data_path)
 
     use_econ = os.path.exists(econ_path)
-    df  = load_pair(raw, pair, econ_path=econ_path if use_econ else None)
+    df  = load_pair(
+        raw, pair,
+        econ_path=econ_path if use_econ else None,
+        denoise=denoise if denoise != "none" else None,
+    )
 
     print(f"      {len(df)} rows after adding indicators  "
           f"({df['Date'].iloc[0].strftime('%Y-%m-%d')} → {df['Date'].iloc[-1].strftime('%Y-%m-%d')})")
@@ -145,15 +152,18 @@ def get_model(args, train_df, val_df, pair):
 
     cfg = TIMEFRAME_CONFIGS[timeframe]
     timesteps = 20_000 if args.quick else cfg["total_timesteps"]
-    tf_suffix = "" if timeframe == "1d" else f"_{timeframe}"
-    ver_suffix = "" if version == "v1" else f"_{version}"
-    save_path = os.path.join(MODELS_PATH, f"{agent}_feature_{pair}{tf_suffix}{ver_suffix}.zip")
+    tf_suffix  = "" if timeframe == "1d" else f"_{timeframe}"
+    ver_suffix = "" if version   == "v1" else f"_{version}"
+    den_suffix = "" if getattr(args, "denoise", "none") == "none" else f"_{args.denoise}"
+    save_path = os.path.join(MODELS_PATH, f"{agent}_feature_{pair}{tf_suffix}{ver_suffix}{den_suffix}.zip")
     n_seeds = args.seeds
 
     if n_seeds > 1:
         return _train_multi_seed(train_df, val_df, pair, timesteps, save_path, n_seeds, agent, env_factory)
 
-    print(f"\n[3/5] Training {agent_upper} ({timeframe} {version}) on {pair}  ({timesteps:,} timesteps)")
+    den_label = getattr(args, "denoise", "none")
+    print(f"\n[3/5] Training {agent_upper} ({timeframe} {version} denoise={den_label}) "
+          f"on {pair}  ({timesteps:,} timesteps)")
     if version == "v2":
         print(f"      ATR SL: {ENV_V2_DEFAULTS['atr_mult_sl']}x ATR  "
               f"TP: {ENV_V2_DEFAULTS['atr_mult_tp']}x ATR  "
@@ -397,13 +407,14 @@ def main():
     agent     = args.agent
     timeframe = args.timeframe
     version   = args.version
+    denoise   = args.denoise
 
     print("=" * 60)
     print(f"  Forex RL Bot — MVP Demo  |  Pair: {pair}  |  Agent: {agent.upper()}  "
-          f"|  TF: {timeframe}  |  Env: {version}")
+          f"|  TF: {timeframe}  |  Env: {version}  |  Denoise: {denoise}")
     print("=" * 60)
 
-    df                = load_data(pair, timeframe=timeframe)
+    df                = load_data(pair, timeframe=timeframe, denoise=denoise)
     train_df, test_df = split(df)
     model, env_class  = get_model(args, train_df, test_df, pair)
     strategy_results  = run_all(model, test_df, env_class=env_class, agent=agent,
