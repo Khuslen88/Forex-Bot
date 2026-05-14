@@ -2,9 +2,10 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch==2.3.1+cpu
 
-# Data
-pandas>=2.0.0
-numpy>=1.24.0
+# Data — pinned to numpy 1.x / pandas 2.x for ABI compat with torch 2.3.1+cpu
+# (numpy 2.x or pandas 3.x triggers a seg fault on torch import)
+numpy>=1.24.0,<2.0
+pandas>=2.0.0,<3.0
 yfinance>=0.2.0
 
 # Economic Data
