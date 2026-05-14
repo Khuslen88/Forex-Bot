@@ -588,8 +588,7 @@ with tab_overview:
                 unsafe_allow_html=True)
     positions = client.state.get("positions", {})
     if positions:
-        rows = []
-        for sym, pos in positions.items():
+        for sym, pos in list(positions.items()):
             cur_price = client._get_current_price(sym)
             units = pos["units"]
             entry = pos["entry_price"]
@@ -600,17 +599,22 @@ with tab_overview:
                            else ((entry / cur_price) - 1)) * 100
             else:
                 pnl, pnl_pct = 0.0, 0.0
-            rows.append({
-                "Pair":      sym,
-                "Direction": direction,
-                "Units":     abs(units),
-                "Entry":     f"{entry:.5f}",
-                "Current":   f"{cur_price:.5f}" if cur_price else "—",
-                "P&L":       f"${pnl:,.2f}",
-                "P&L %":     f"{pnl_pct:+.2f}%",
-                "Opened":    pos.get("opened_at", "")[:16],
-            })
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+            pnl_color = "#10B981" if pnl >= 0 else "#EF4444"
+            c1, c2, c3, c4, c5, c6, c7 = st.columns([1, 1, 1, 1.2, 1.2, 1.2, 1])
+            c1.markdown(f"**{sym}**")
+            c2.markdown(f"`{direction}`")
+            c3.markdown(f"{abs(units):,}")
+            c4.markdown(f"Entry `{entry:.5f}`")
+            c5.markdown(f"Now `{cur_price:.5f}`" if cur_price else "—")
+            c6.markdown(f"<span style='color:{pnl_color}; font-weight:600'>"
+                        f"${pnl:,.2f} ({pnl_pct:+.2f}%)</span>",
+                        unsafe_allow_html=True)
+            if c7.button("Close", key=f"close_{sym}", type="primary"):
+                result = client.close_position(sym)
+                st.success(f"Closed {sym} — realized P&L: ${result['pl']:,.2f}")
+                st.cache_data.clear()
+                st.rerun()
     else:
         st.info("No open positions.")
 
