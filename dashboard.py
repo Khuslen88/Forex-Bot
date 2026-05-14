@@ -19,23 +19,6 @@ import signal
 import datetime
 import subprocess
 
-# ── numpy._core compat shim ──────────────────────────────────────────────────
-# Production models were pickled with numpy 2.x, which references
-# `numpy._core.*`. On Streamlit Cloud we use numpy 1.x (needed for torch
-# 2.3.1+cpu ABI stability). Alias the numpy 2.x private module names to the
-# numpy 1.x equivalents so pickle.load can resolve them.
-import numpy as _np
-if not hasattr(_np, "_core"):
-    import numpy.core as _np_core
-    _np._core = _np_core
-    sys.modules["numpy._core"] = _np_core
-    for _sub in ("numeric", "multiarray", "umath", "_methods",
-                 "fromnumeric", "_dtype_ctypes"):
-        try:
-            sys.modules[f"numpy._core.{_sub}"] = getattr(_np_core, _sub)
-        except AttributeError:
-            pass
-
 import pandas as pd
 import numpy as np
 import streamlit as st
@@ -257,7 +240,10 @@ def load_model_for_pair(pair: str, agent: str, timeframe: str,
         model = loader.load(path, custom_objects=custom_objects)
         return model, int(model.observation_space.shape[0])
     except Exception as e:
-        st.error(f"Failed to load {fname}: {e}")
+        # Don't crash the whole dashboard on cloud — models were pickled
+        # locally with newer numpy; the registry/charts/backtests still work.
+        if not _IS_CLOUD:
+            st.error(f"Failed to load {fname}: {e}")
         return None, 0
 
 
@@ -493,6 +479,15 @@ with tab_overview:
 
     st.markdown('<div class="section-header">Live Signals (Best Model Per Pair)</div>',
                 unsafe_allow_html=True)
+
+    if _IS_CLOUD:
+        st.info(
+            "🔒 **Cloud demo mode.** Live model inference is disabled on Streamlit Cloud "
+            "(model files were pickled with a newer numpy/Python that conflicts with the "
+            "cloud's stable runtime). All other features — Model Performance tab, Price "
+            "Charts, Backtest Reports, Paper Account — are fully functional. "
+            "To see live signals, clone the repo and run `streamlit run dashboard.py` locally."
+        )
 
     sig_cols = st.columns(len(FOREX_PAIRS))
     for i, pair in enumerate(FOREX_PAIRS):
