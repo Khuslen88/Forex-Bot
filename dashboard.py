@@ -33,7 +33,10 @@ except ImportError:
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from stable_baselines3 import DQN, PPO
+# NOTE: stable_baselines3 (which pulls in torch) is imported lazily inside
+# load_model_for_pair() — importing it at module level was causing Streamlit
+# Cloud to seg fault during sandbox startup. The dashboard is fully usable
+# without it (everything except live inference works from registry/yfinance).
 from src.broker.paper_client import PaperClient
 from src.features.indicators import add_indicators, load_econ_features
 from src.features.sentiment import add_sentiment_to_df, HAS_TEXTBLOB
@@ -227,7 +230,11 @@ def load_model_for_pair(pair: str, agent: str, timeframe: str,
     path = os.path.join(MODELS_PATH, fname)
     if not os.path.exists(path):
         return None, 0
+    # On cloud, skip loading entirely — torch import causes seg faults.
+    if _IS_CLOUD:
+        return None, 0
     try:
+        from stable_baselines3 import DQN, PPO  # lazy import
         loader = DQN if agent.upper() == "DQN" else PPO
         # custom_objects bypasses schedule lambdas that may fail to unpickle
         # across Python versions (only needed for training, not inference).
