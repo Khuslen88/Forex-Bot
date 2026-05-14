@@ -1,3 +1,7 @@
+# PyTorch — CPU-only wheel (Streamlit Cloud has no GPU; CUDA build seg-faults)
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.3.1+cpu
+
 # Data
 pandas>=2.0.0
 numpy>=1.24.0
@@ -20,7 +24,7 @@ textblob>=0.17.0
 # Machine Learning / RL
 stable-baselines3>=2.0.0
 gymnasium>=0.29.0
-torch>=2.0.0
+# torch pinned at top (CPU-only wheel)
 
 # Visualization
 plotly>=5.15.0
