@@ -1,12 +1,12 @@
 # PyTorch — CPU-only wheel (Streamlit Cloud has no GPU; CUDA build seg-faults)
 # torch 2.4+ supports numpy 2.x, which the production models were pickled with.
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.4.1+cpu
+torch==2.3.1+cpu
 
-# Data — numpy 2.x required to unpickle production models (saved with numpy 2.x;
-# they reference numpy._core which only exists in 2.x). pandas pinned <3.x for
-# C-API stability with the rest of the stack.
-numpy>=2.0,<3.0
+# Data — numpy 1.x for ABI/SIGSEGV safety with torch 2.3.1.
+# dashboard.py installs a numpy._core compat shim so pickles saved with
+# numpy 2.x (production models) can still unpickle here.
+numpy>=1.24.0,<2.0
 pandas>=2.0.0,<3.0
 yfinance>=0.2.0
 

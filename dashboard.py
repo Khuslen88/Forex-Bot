@@ -19,6 +19,23 @@ import signal
 import datetime
 import subprocess
 
+# ── numpy._core compat shim ──────────────────────────────────────────────────
+# Production models were pickled with numpy 2.x, which references
+# `numpy._core.*`. On Streamlit Cloud we use numpy 1.x (needed for torch
+# 2.3.1+cpu ABI stability). Alias the numpy 2.x private module names to the
+# numpy 1.x equivalents so pickle.load can resolve them.
+import numpy as _np
+if not hasattr(_np, "_core"):
+    import numpy.core as _np_core
+    _np._core = _np_core
+    sys.modules["numpy._core"] = _np_core
+    for _sub in ("numeric", "multiarray", "umath", "_methods",
+                 "fromnumeric", "_dtype_ctypes"):
+        try:
+            sys.modules[f"numpy._core.{_sub}"] = getattr(_np_core, _sub)
+        except AttributeError:
+            pass
+
 import pandas as pd
 import numpy as np
 import streamlit as st
@@ -229,7 +246,15 @@ def load_model_for_pair(pair: str, agent: str, timeframe: str,
         return None, 0
     try:
         loader = DQN if agent.upper() == "DQN" else PPO
-        model = loader.load(path)
+        # custom_objects bypasses schedule lambdas that may fail to unpickle
+        # across Python versions (only needed for training, not inference).
+        custom_objects = {
+            "learning_rate":  0.0,
+            "lr_schedule":    lambda _: 0.0,
+            "clip_range":     lambda _: 0.0,
+            "exploration_schedule": lambda _: 0.0,
+        }
+        model = loader.load(path, custom_objects=custom_objects)
         return model, int(model.observation_space.shape[0])
     except Exception as e:
         st.error(f"Failed to load {fname}: {e}")
